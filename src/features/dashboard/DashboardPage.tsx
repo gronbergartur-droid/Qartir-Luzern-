@@ -135,6 +135,10 @@ export function DashboardPage() {
           );
         })}
       </div>
+
+      <Link to="/tarife" className="mt-6 mb-2 block text-center text-xs text-ink-400 underline-offset-2 active:underline">
+        Tarife & Preise
+      </Link>
     </div>
   );
 }

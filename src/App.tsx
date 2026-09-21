@@ -6,6 +6,7 @@ import { CasesPage } from '@/features/cases/CasesPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ScanDetailPage } from '@/features/history/ScanDetailPage';
 import { HistoryPage } from '@/features/history/HistoryPage';
+import { PricingPage } from '@/features/pricing/PricingPage';
 import { CreateSupplierPage } from '@/features/suppliers/CreateSupplierPage';
 import { EditSupplierPage } from '@/features/suppliers/EditSupplierPage';
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage';
@@ -54,6 +55,7 @@ function App() {
         />
         <Route path="/faelle/:caseId" element={<CaseDetailPage />} />
         <Route path="/faelle/:caseId/ausgang" element={<CaseOuttakeRoute />} />
+        <Route path="/tarife" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
