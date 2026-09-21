@@ -1,14 +1,17 @@
 # IDM Mobile
 
 Mobile-first Instrumentenmanagement-App für die AEMP (Aufbereitungseinheit für
-Medizinprodukte). Erstes Modul: **LEIH-SIEB SCANNER**.
+Medizinprodukte). Kernmodul: **LEIH-SIEB SCANNER** mit vollständigem
+Lieferanten-, Fall- und Vorher/Nachher-Lebenszyklus.
 
 Leihsiebe werden per Smartphone-Kamera fotografiert. Die App erkennt Barcode,
 QR-Code und Text (OCR) auf dem Etikett, gleicht den Sieb-Code (z. B. `LEIH 04`
 oder `SSW-LEIH-04-02`) mit einer Referenzdatenbank ab und führt Anwender:innen
 durch eine manuelle Instrumenten-Kontrolle (erwartete vs. erkannte Instrumente,
 fehlende/zusätzliche Instrumente) — inklusive verpflichtender Bestätigung vor
-dem Speichern.
+dem Speichern. Beim Eingang eines Leihsiebs wird daraus ein **Sieb-Fall**
+eröffnet; nach der Operation wird ein zweiter (Ausgangs-)Scan erfasst und
+automatisch mit dem Eingang verglichen (Modul „Vorher/Nachher-Vergleich“).
 
 ## KI-Nutzung: nur unterstützend
 
@@ -22,6 +25,23 @@ Barcode-, QR- und Texterkennung sind **rein unterstützende** Funktionen:
 - Ein Scan kann erst gespeichert werden, nachdem alle Positionen kontrolliert
   wurden und die Anwender:in die Ergebnisse ausdrücklich bestätigt hat
   (Schritt „Bestätigung“, siehe `SummaryStep`).
+
+### KI-Vergleich (Vorher/Nachher)
+
+Der Vorher/Nachher-Vergleich vergleicht **nicht** die beiden Fotos pixelweise
+per Bildverarbeitung. Eine zuverlässige automatische Erkennung einzelner
+Chirurgie-Instrumente auf einem Foto würde ein eigens trainiertes
+Bildverarbeitungsmodell voraussetzen, das hier nicht zur Verfügung steht –
+ein unbestätigtes „KI hat X erkannt“ wäre im medizinischen Kontext riskant.
+
+Stattdessen berechnet `src/features/cases/comparison.ts` einen
+deterministischen Diff zwischen der **von Anwender:innen bestätigten**
+Eingangs-Checkliste und der bestätigten Ausgangs-Checkliste desselben Falls:
+fehlende Instrumente, Mengenabweichungen und neue/entfernte Zusatz-
+Instrumente werden so zuverlässig und nachvollziehbar erkannt. Für „falsche
+Instrumente“ (Verwechslungen) schlägt eine einfache Namensähnlichkeits-
+Heuristik mögliche Paare vor („Schere“ fehlt, „Klemme“ ist neu aufgetaucht) –
+klar als KI-Vorschlag gekennzeichnet und nie automatisch übernommen.
 
 ## Tech-Stack
 
@@ -37,21 +57,30 @@ Barcode-, QR- und Texterkennung sind **rein unterstützende** Funktionen:
 src/
   types/database.ts        Domain-Typen, 1:1 zum geplanten Supabase-Schema
   data/referenceData.ts    Seed-/Demo-Referenzdaten (Sieb-Codes, Lieferanten)
+  lib/
+    currentUser.ts          Leichtgewichtige "wer ist angemeldet"-Kennung
+                             (kein echtes Login, siehe unten)
+    supabase/client.ts      Supabase-Client (nur aktiv, wenn ENV gesetzt)
   services/
     dataProvider.ts        Backend-agnostisches Interface
     localProvider.ts        Lokale/Demo-Implementierung (localStorage)
     supabaseProvider.ts     Supabase-Implementierung (gleiche Schnittstelle)
     index.ts                 Schaltet automatisch zwischen den beiden um
-  lib/supabase/client.ts   Supabase-Client (nur aktiv, wenn ENV gesetzt)
   features/
-    scanner/                Modul 1: LEIH-SIEB SCANNER (Kamera, Erkennung,
-                             Abgleich, Instrumenten-Kontrolle, Speichern)
-    history/                 Sieb-Historie (Liste + Detailansicht)
-    audit/                    Audit-Log
-    suppliers/, comparison/  Platzhalter für kommende Module
+    scanner/                LEIH-SIEB SCANNER (Kamera, Erkennung, Abgleich,
+                             Instrumenten-Kontrolle); unterstützt drei Modi:
+                             eigenständige Kontrolle, Fall-Eingang, Fall-Ausgang
+    cases/                    Sieb-Fälle: Eingang ↔ Ausgang, Vergleichs-Engine
+                             (comparison.ts), Fälle-Liste & -Detail
+    suppliers/                Lieferantenverwaltung: CRUD, Detailseite mit
+                             Sieb-Referenzen und vollständiger Fall-Historie
+    trays/                    Sieb-Referenzen anlegen/bearbeiten (Instrumente,
+                             Lieferanten-Zuordnung)
+    history/                 Sieb-Historie (Liste + Detailansicht je Scan)
+    audit/                    Audit-Log (jede Aktion mit Datum/Zeit/Benutzer)
 supabase/
   migrations/0001_init.sql  Schema: suppliers, trays, tray_instruments,
-                             scans, audit_log (inkl. RLS-Policies)
+                             scans, loan_cases, audit_log (inkl. RLS-Policies)
   seed.sql                  Demo-Daten, analog zu data/referenceData.ts
 ```
 
@@ -75,15 +104,39 @@ sobald Benutzer-/Standort-/Rollenverwaltung eingeführt wird.
 
 ## Module
 
-- **Sieb-Historie** – aktiv, zeigt alle bestätigten Scans
-- **Audit-Log** – aktiv, protokolliert jede Sieb-Zuordnung und Bestätigung
-  lückenlos und unveränderbar
-- **Lieferantenverwaltung** – aktiv als durchsuchbares Verzeichnis von 13
-  bestätigten Schweizer Leihservice-Anbietern (Standort, Fachgebiete,
-  Kontakt, Quelle); Bearbeiten/Anlegen neuer Lieferanten ist noch offen
-- **Vorher/Nachher-Vergleich** – geplant: zweiter Scan nach der Operation,
-  verknüpft mit dem Ausgangs-Scan, automatischer Abgleich von Abweichungen
-  (aktuell als „Bald verfügbar“ markiert)
+- **LEIH-SIEB SCANNER** – Foto, Barcode/QR/OCR-Erkennung, Abgleich,
+  Instrumenten-Kontrolle. Läuft als eigenständige Kontrolle (`/scanner`)
+  oder als Eingangs-/Ausgangs-Scan eines Sieb-Falls.
+- **Lieferantenverwaltung** (`/lieferanten`) – vollständiges CRUD: anlegen,
+  bearbeiten, aktivieren/deaktivieren, löschen (blockiert, solange noch
+  Siebe zugeordnet sind – stattdessen deaktivieren). Detailseite zeigt alle
+  zugeordneten Sieb-Referenzen und die komplette Fall-Historie
+  (Sieb-Code, Datum, Eingang, Ausgang, Operation, Abweichungen).
+- **Sieb-Referenzen** (`/sieb/neu`, von der Lieferantenseite aus) – neues
+  Leihsieb erfassen: Code, Alias-Bezeichnungen, Instrumentenliste, Zuordnung
+  zu einem *aktiven* Lieferanten (Pflichtfeld).
+- **Sieb-Fälle / Vorher-Nachher-Vergleich** (`/faelle`) – Eingang eröffnet
+  einen Fall; nach der Operation wird der Ausgang erfasst und automatisch mit
+  dem Eingang verglichen (fehlende/zusätzliche Instrumente, Mengenabweichungen,
+  Verwechslungs-Vorschläge – siehe „KI-Vergleich“ oben). Jeder erkannte Code
+  wird beim Ausgang gegen das erwartete Sieb geprüft; bei Abweichung erscheint
+  ein Warnhinweis, ohne den Ablauf zu blockieren.
+- **Sieb-Historie** (`/historie`) – jeder einzelne Scan (auch Eingangs-/
+  Ausgangs-Scans eines Falls) bleibt hier zusätzlich einsehbar.
+- **Audit-Log** (`/audit`) – jede Lieferanten-, Sieb- und Fall-Aktion sowie
+  jede Kontroll-Bestätigung wird lückenlos mit Datum, Uhrzeit und Benutzer
+  protokolliert (append-only).
+
+### Benutzer-Kennzeichen
+
+Oben rechts in der App lässt sich ein Name/Kürzel eintragen (siehe
+`src/lib/currentUser.ts`, in `TopBar` eingebunden). Das ist **keine
+Authentifizierung** – es gibt kein Login und keine Zugriffskontrolle,
+sondern das digitale Äquivalent einer Handzeichen-Spalte auf Papier: der
+eingetragene Name wird als `performedBy` an jedem Scan, jeder
+Lieferanten-/Sieb-Änderung und jedem Fall gespeichert. Echte
+Benutzer-/Rollenverwaltung über Supabase Auth ist ein separater, künftiger
+Schritt.
 
 ## Entwicklung
 

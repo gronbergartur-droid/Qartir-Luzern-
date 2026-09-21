@@ -1,10 +1,17 @@
 import { AppShell } from '@/components/layout/AppShell';
 import { AuditLogPage } from '@/features/audit/AuditLogPage';
-import { ComparisonPage } from '@/features/comparison/ComparisonPage';
+import { CaseDetailPage } from '@/features/cases/CaseDetailPage';
+import { CaseOuttakeRoute } from '@/features/cases/CaseOuttakeRoute';
+import { CasesPage } from '@/features/cases/CasesPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ScanDetailPage } from '@/features/history/ScanDetailPage';
 import { HistoryPage } from '@/features/history/HistoryPage';
+import { CreateSupplierPage } from '@/features/suppliers/CreateSupplierPage';
+import { EditSupplierPage } from '@/features/suppliers/EditSupplierPage';
+import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage';
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
+import { CreateTrayPage } from '@/features/trays/CreateTrayPage';
+import { EditTrayPage } from '@/features/trays/EditTrayPage';
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
@@ -31,7 +38,22 @@ function App() {
         <Route path="/historie/:scanId" element={<ScanDetailPage />} />
         <Route path="/audit" element={<AuditLogPage />} />
         <Route path="/lieferanten" element={<SuppliersPage />} />
-        <Route path="/vergleich" element={<ComparisonPage />} />
+        <Route path="/lieferanten/neu" element={<CreateSupplierPage />} />
+        <Route path="/lieferanten/:supplierId" element={<SupplierDetailPage />} />
+        <Route path="/lieferanten/:supplierId/bearbeiten" element={<EditSupplierPage />} />
+        <Route path="/sieb/neu" element={<CreateTrayPage />} />
+        <Route path="/sieb/:trayId/bearbeiten" element={<EditTrayPage />} />
+        <Route path="/faelle" element={<CasesPage />} />
+        <Route
+          path="/faelle/eingang"
+          element={
+            <Suspense fallback={<ScannerLoadingFallback />}>
+              <ScannerFlow mode={{ kind: 'case-intake' }} />
+            </Suspense>
+          }
+        />
+        <Route path="/faelle/:caseId" element={<CaseDetailPage />} />
+        <Route path="/faelle/:caseId/ausgang" element={<CaseOuttakeRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -1,9 +1,10 @@
-import { ClipboardList, LayoutGrid, ScanLine, ShieldCheck } from 'lucide-react';
+import { ClipboardList, LayoutGrid, ListChecks, ScanLine, ShieldCheck } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const items = [
   { to: '/', label: 'Start', icon: LayoutGrid, end: true },
   { to: '/scanner', label: 'Scanner', icon: ScanLine, end: false },
+  { to: '/faelle', label: 'Fälle', icon: ListChecks, end: false },
   { to: '/historie', label: 'Historie', icon: ClipboardList, end: false },
   { to: '/audit', label: 'Audit', icon: ShieldCheck, end: false },
 ];

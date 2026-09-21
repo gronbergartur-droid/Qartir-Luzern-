@@ -70,6 +70,8 @@ create table if not exists scans (
   id uuid primary key default gen_random_uuid(),
   tray_id uuid references trays (id) on delete set null,
   supplier_id uuid references suppliers (id) on delete set null,
+  -- Set when this scan is the intake or outtake scan of a loan_cases row.
+  case_id uuid,
   -- Path/URL into Supabase Storage, not a base64 blob.
   captured_image_url text,
   -- Raw assistive AI output (barcode/QR values, OCR text, ranked candidates).
@@ -93,19 +95,54 @@ create table if not exists scans (
 );
 
 create index if not exists scans_tray_id_idx on scans (tray_id);
+create index if not exists scans_case_id_idx on scans (case_id);
 create index if not exists scans_created_at_idx on scans (created_at desc);
 create index if not exists scans_status_idx on scans (status);
 
 -- ---------------------------------------------------------------------------
--- audit_log (append-only trail for every scan/tray/supplier action)
+-- loan_cases (Vorher/Nachher-Vergleich: one loaner-tray-in-use lifecycle)
+-- ---------------------------------------------------------------------------
+create table if not exists loan_cases (
+  id uuid primary key default gen_random_uuid(),
+  tray_id uuid not null references trays (id) on delete restrict,
+  supplier_id uuid not null references suppliers (id) on delete restrict,
+  status text not null default 'outtake_pending'
+    check (status in ('outtake_pending', 'compared')),
+  operation_note text,
+  operation_date date,
+  intake_scan_id uuid not null references scans (id) on delete restrict,
+  outtake_scan_id uuid references scans (id) on delete set null,
+  -- Deterministic diff of the confirmed intake/outtake checklists - see
+  -- src/features/cases/comparison.ts. Not an automated image/vision result.
+  comparison jsonb,
+  performed_by_intake text not null,
+  performed_by_outtake text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table scans
+  add constraint scans_case_id_fkey foreign key (case_id) references loan_cases (id) on delete set null;
+
+create index if not exists loan_cases_tray_id_idx on loan_cases (tray_id);
+create index if not exists loan_cases_supplier_id_idx on loan_cases (supplier_id);
+create index if not exists loan_cases_status_idx on loan_cases (status);
+create index if not exists loan_cases_created_at_idx on loan_cases (created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- audit_log (append-only trail for every scan/tray/supplier/case action)
 -- ---------------------------------------------------------------------------
 create table if not exists audit_log (
   id uuid primary key default gen_random_uuid(),
-  entity_type text not null check (entity_type in ('scan', 'tray', 'supplier')),
+  entity_type text not null check (entity_type in ('scan', 'tray', 'supplier', 'case')),
   entity_id uuid not null,
   action text not null check (action in (
     'scan_started', 'scan_matched', 'scan_unmatched', 'scan_confirmed',
-    'scan_cancelled', 'instrument_manually_adjusted'
+    'scan_cancelled', 'instrument_manually_adjusted',
+    'supplier_created', 'supplier_updated', 'supplier_activated',
+    'supplier_deactivated', 'supplier_deleted',
+    'tray_created', 'tray_updated',
+    'case_intake', 'case_outtake', 'case_compared'
   )),
   performed_by text not null,
   details jsonb not null default '{}',
@@ -131,6 +168,11 @@ create trigger trays_set_updated_at
   before update on trays
   for each row execute function set_updated_at();
 
+drop trigger if exists loan_cases_set_updated_at on loan_cases;
+create trigger loan_cases_set_updated_at
+  before update on loan_cases
+  for each row execute function set_updated_at();
+
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 --
@@ -145,6 +187,7 @@ alter table suppliers enable row level security;
 alter table trays enable row level security;
 alter table tray_instruments enable row level security;
 alter table scans enable row level security;
+alter table loan_cases enable row level security;
 alter table audit_log enable row level security;
 
 create policy "Authenticated read suppliers" on suppliers
@@ -153,6 +196,8 @@ create policy "Authenticated write suppliers" on suppliers
   for insert to authenticated with check (true);
 create policy "Authenticated update suppliers" on suppliers
   for update to authenticated using (true) with check (true);
+create policy "Authenticated delete suppliers" on suppliers
+  for delete to authenticated using (true);
 
 create policy "Authenticated read trays" on trays
   for select to authenticated using (true);
@@ -173,6 +218,13 @@ create policy "Authenticated read scans" on scans
 create policy "Authenticated write scans" on scans
   for insert to authenticated with check (true);
 create policy "Authenticated update scans" on scans
+  for update to authenticated using (true) with check (true);
+
+create policy "Authenticated read loan_cases" on loan_cases
+  for select to authenticated using (true);
+create policy "Authenticated write loan_cases" on loan_cases
+  for insert to authenticated with check (true);
+create policy "Authenticated update loan_cases" on loan_cases
   for update to authenticated using (true) with check (true);
 
 create policy "Authenticated read audit_log" on audit_log

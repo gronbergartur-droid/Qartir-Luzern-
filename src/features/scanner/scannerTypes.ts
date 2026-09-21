@@ -2,10 +2,22 @@ import type {
   ExtraInstrumentEntry,
   InstrumentCheckEntry,
   RecognitionResult,
+  ScanRecord,
   Supplier,
   Tray,
   TrayInstrument,
 } from '@/types/database';
+
+/**
+ * Which lifecycle this run of the scanner serves. `standalone` is the
+ * original ad-hoc "Kontrolle starten" flow (unchanged). `case-intake` opens
+ * a new loaner case. `case-outtake` records the return scan for an already
+ * open case and is compared against that case's intake scan.
+ */
+export type ScannerMode =
+  | { kind: 'standalone' }
+  | { kind: 'case-intake' }
+  | { kind: 'case-outtake'; caseId: string; tray: Tray; supplier: Supplier | null; intakeScan: ScanRecord };
 
 export type ScannerStep =
   | 'capture'
@@ -30,7 +42,6 @@ export interface ScannerState {
   checks: InstrumentCheckEntry[];
   extraInstruments: ExtraInstrumentEntry[];
   notes: string;
-  performedBy: string;
 }
 
 export const STEP_ORDER: ScannerStep[] = [
@@ -55,6 +66,10 @@ export const STEP_LABELS: Record<ScannerStep, string> = {
   done: 'Abgeschlossen',
 };
 
+export function normalizeTrayIdentifier(value: string): string {
+  return value.trim().toUpperCase().replace(/[\s_]+/g, '-');
+}
+
 export function createInitialScannerState(): ScannerState {
   return {
     scanId: crypto.randomUUID(),
@@ -68,6 +83,5 @@ export function createInitialScannerState(): ScannerState {
     checks: [],
     extraInstruments: [],
     notes: '',
-    performedBy: 'AEMP-Mitarbeiter:in',
   };
 }

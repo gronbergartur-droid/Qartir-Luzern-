@@ -1,8 +1,12 @@
 import type {
   AuditLogEntry,
+  CaseComparison,
+  LoanCase,
   ScanRecord,
   Supplier,
+  SupplierInput,
   Tray,
+  TrayInput,
   TrayInstrument,
 } from '@/types/database';
 
@@ -18,11 +22,18 @@ import type {
 export interface DataProvider {
   getSuppliers(): Promise<Supplier[]>;
   getSupplier(id: string): Promise<Supplier | null>;
+  createSupplier(input: SupplierInput): Promise<Supplier>;
+  updateSupplier(id: string, input: SupplierInput): Promise<Supplier>;
+  setSupplierActive(id: string, active: boolean): Promise<Supplier>;
+  /** Rejects if the supplier is still referenced by any tray - deactivate instead. */
+  deleteSupplier(id: string): Promise<void>;
 
   getTrays(): Promise<Tray[]>;
   /** Resolve a tray by its primary code or any of its known aliases (case-insensitive). */
   findTrayByIdentifier(identifier: string): Promise<Tray | null>;
   getTrayInstruments(trayId: string): Promise<TrayInstrument[]>;
+  createTray(input: TrayInput): Promise<Tray>;
+  updateTray(id: string, input: TrayInput): Promise<Tray>;
 
   saveScan(scan: ScanRecord): Promise<ScanRecord>;
   getScanHistory(): Promise<ScanRecord[]>;
@@ -30,4 +41,19 @@ export interface DataProvider {
 
   appendAuditEntry(entry: AuditLogEntry): Promise<AuditLogEntry>;
   getAuditLog(): Promise<AuditLogEntry[]>;
+
+  /** Opens a new loaner case from a confirmed intake scan (already saved via saveScan). */
+  createCase(input: {
+    trayId: string;
+    supplierId: string;
+    intakeScanId: string;
+    operationNote: string | null;
+    operationDate: string | null;
+    performedBy: string;
+  }): Promise<LoanCase>;
+  getCases(): Promise<LoanCase[]>;
+  getCase(id: string): Promise<LoanCase | null>;
+  getCasesBySupplier(supplierId: string): Promise<LoanCase[]>;
+  /** Attaches a confirmed outtake scan (already saved via saveScan) and its comparison to a case. */
+  completeOuttake(caseId: string, outtakeScanId: string, comparison: CaseComparison): Promise<LoanCase>;
 }

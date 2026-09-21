@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CurrentUserBadge } from './CurrentUserBadge';
 
 interface TopBarProps {
   title: string;
@@ -31,6 +32,7 @@ export function TopBar({ title, subtitle, onBack, showBack, right }: TopBarProps
           {subtitle && <p className="truncate text-xs text-ink-500">{subtitle}</p>}
         </div>
         {right}
+        <CurrentUserBadge />
       </div>
     </header>
   );

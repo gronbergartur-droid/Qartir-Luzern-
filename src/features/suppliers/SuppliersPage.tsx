@@ -3,8 +3,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
 import type { Supplier } from '@/types/database';
-import { BadgeCheck, Mail, MapPin, Phone, Search, Truck } from 'lucide-react';
+import { BadgeCheck, Mail, MapPin, Phone, Plus, Search, Truck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
@@ -25,7 +26,19 @@ export function SuppliersPage() {
 
   return (
     <div>
-      <TopBar title="Lieferantenverwaltung" subtitle="Bestätigte Leihservice-Anbieter (Schweiz)" />
+      <TopBar
+        title="Lieferantenverwaltung"
+        subtitle="Bestätigte Leihservice-Anbieter (Schweiz)"
+        right={
+          <Link
+            to="/lieferanten/neu"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 active:bg-brand-100"
+            aria-label="Neuer Lieferant"
+          >
+            <Plus size={18} />
+          </Link>
+        }
+      />
 
       <div className="px-4 pt-4">
         <div className="relative">
@@ -56,7 +69,9 @@ export function SuppliersPage() {
 
         <div className="space-y-2.5">
           {filtered.map((supplier) => (
-            <SupplierCard key={supplier.id} supplier={supplier} />
+            <Link key={supplier.id} to={`/lieferanten/${supplier.id}`} className="block">
+              <SupplierCard supplier={supplier} />
+            </Link>
           ))}
         </div>
 
@@ -72,7 +87,7 @@ export function SuppliersPage() {
 
 function SupplierCard({ supplier }: { supplier: Supplier }) {
   return (
-    <Card className="p-3.5">
+    <Card className={['p-3.5 active:bg-ink-50', supplier.active ? '' : 'opacity-60'].join(' ')}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-ink-900">{supplier.name}</p>
@@ -83,14 +98,15 @@ function SupplierCard({ supplier }: { supplier: Supplier }) {
             </p>
           )}
         </div>
-        {supplier.loanServiceConfirmed && (
-          <span className="shrink-0">
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {!supplier.active && <Badge tone="neutral">Inaktiv</Badge>}
+          {supplier.loanServiceConfirmed && (
             <Badge tone="success">
               <BadgeCheck size={12} />
               Leihservice
             </Badge>
-          </span>
-        )}
+          )}
+        </div>
       </div>
 
       {supplier.loanServiceNote && (
@@ -113,16 +129,16 @@ function SupplierCard({ supplier }: { supplier: Supplier }) {
       {(supplier.contactPhone || supplier.contactEmail || supplier.contactNote) && (
         <div className="mt-3 space-y-1 border-t border-ink-100 pt-2.5 text-xs text-ink-600">
           {supplier.contactPhone && (
-            <a href={`tel:${supplier.contactPhone.replace(/\s+/g, '')}`} className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5">
               <Phone size={12} className="shrink-0 text-ink-400" />
               {supplier.contactPhone}
-            </a>
+            </span>
           )}
           {supplier.contactEmail && (
-            <a href={`mailto:${supplier.contactEmail}`} className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5">
               <Mail size={12} className="shrink-0 text-ink-400" />
               {supplier.contactEmail}
-            </a>
+            </span>
           )}
           {supplier.contactNote && (
             <p className="flex items-start gap-1.5 text-ink-500">

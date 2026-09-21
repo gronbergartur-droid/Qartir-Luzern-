@@ -1,4 +1,8 @@
 import { TopBar } from '@/components/layout/TopBar';
+import { compareCaseScans } from '@/features/cases/comparison';
+import { CaseIntakeSummaryStep } from '@/features/cases/CaseIntakeSummaryStep';
+import { CaseOuttakeSummaryStep } from '@/features/cases/CaseOuttakeSummaryStep';
+import { getCurrentUser } from '@/lib/currentUser';
 import { dataProvider } from '@/services';
 import type {
   AuditLogEntry,
@@ -8,13 +12,14 @@ import type {
   Supplier,
   Tray,
 } from '@/types/database';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CameraCapture } from './CameraCapture';
 import { StepProgress } from './components/StepProgress';
 import type { RecognitionStage } from './recognition/runRecognition';
 import { runRecognition } from './recognition/runRecognition';
-import { createInitialScannerState, STEP_LABELS } from './scannerTypes';
+import type { ScannerMode } from './scannerTypes';
+import { createInitialScannerState, normalizeTrayIdentifier, STEP_LABELS } from './scannerTypes';
 import { DoneStep } from './steps/DoneStep';
 import { IdentifyStep } from './steps/IdentifyStep';
 import { InstrumentCheckStep } from './steps/InstrumentCheckStep';
@@ -23,19 +28,34 @@ import { SummaryStep } from './steps/SummaryStep';
 import { TrayMatchedStep } from './steps/TrayMatchedStep';
 import { UnmatchedStep } from './steps/UnmatchedStep';
 
-export function ScannerFlow() {
+const MODE_SUBTITLE: Record<ScannerMode['kind'], string> = {
+  standalone: 'LEIH-SIEB SCANNER',
+  'case-intake': 'Eingang erfassen',
+  'case-outtake': 'Ausgang erfassen',
+};
+
+interface ScannerFlowProps {
+  mode?: ScannerMode;
+}
+
+export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps) {
   const navigate = useNavigate();
   const [state, setState] = useState(createInitialScannerState);
   const [recognitionStage, setRecognitionStage] = useState<RecognitionStage>('barcode');
   const [allTrays, setAllTrays] = useState<Tray[]>([]);
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
+  const [mismatchWarning, setMismatchWarning] = useState<string | null>(null);
+  const [operationNote, setOperationNote] = useState('');
+  const [operationDate, setOperationDate] = useState('');
+  const [openedCaseId, setOpenedCaseId] = useState<string | null>(null);
 
   const patch = useCallback((p: Partial<typeof state>) => setState((prev) => ({ ...prev, ...p })), []);
 
   const resetFlow = useCallback(() => {
     setState(createInitialScannerState());
     setRecognitionStage('barcode');
+    setMismatchWarning(null);
   }, []);
 
   const handleCapture = useCallback(
@@ -98,20 +118,35 @@ export function ScannerFlow() {
   const handleConfirmIdentifier = useCallback(
     async (identifier: string) => {
       patch({ selectedIdentifier: identifier, step: 'matching' });
+
+      if (mode.kind === 'case-outtake') {
+        const normalized = normalizeTrayIdentifier(identifier);
+        const matchesExpected =
+          normalizeTrayIdentifier(mode.tray.code) === normalized ||
+          mode.tray.aliases.some((alias) => normalizeTrayIdentifier(alias) === normalized);
+        setMismatchWarning(
+          matchesExpected
+            ? null
+            : `Der erkannte Code „${identifier}" stimmt nicht mit dem erwarteten Sieb ${mode.tray.code} überein. Bitte prüfen, ob das richtige Sieb zurückgegeben wurde.`,
+        );
+        await loadTrayIntoState(mode.tray);
+        return;
+      }
+
       const tray = await dataProvider.findTrayByIdentifier(identifier);
       if (tray) {
         await loadTrayIntoState(tray);
       } else {
-        const [trays, suppliers] = await Promise.all([dataProvider.getTrays(), dataProvider.getSuppliers()]);
+        const [trays, suppliersList] = await Promise.all([dataProvider.getTrays(), dataProvider.getSuppliers()]);
         setAllTrays(trays);
-        setAllSuppliers(suppliers);
+        setAllSuppliers(suppliersList);
         await dataProvider.appendAuditEntry(
           buildAuditEntry(state.scanId, 'scan_unmatched', { identifier }),
         );
         patch({ step: 'unmatched' });
       }
     },
-    [loadTrayIntoState, patch, state.scanId],
+    [loadTrayIntoState, mode, patch, state.scanId],
   );
 
   const handleUpdateCheck = useCallback(
@@ -138,32 +173,33 @@ export function ScannerFlow() {
     }));
   }, []);
 
+  const computeDetectedCount = (checks: InstrumentCheckEntry[], extras: ExtraInstrumentEntry[]) =>
+    checks.reduce((sum, c) => sum + c.quantityConfirmed, 0) + extras.reduce((sum, e) => sum + e.quantity, 0);
+
+  const computeMissingIds = (checks: InstrumentCheckEntry[]) =>
+    checks.filter((c) => c.quantityConfirmed < c.quantityExpected).map((c) => c.instrumentId);
+
   const handleConfirmAndSave = useCallback(async () => {
     if (!state.tray) return;
     setSaving(true);
     try {
-      const detectedCount =
-        state.checks.reduce((sum, c) => sum + c.quantityConfirmed, 0) +
-        state.extraInstruments.reduce((sum, e) => sum + e.quantity, 0);
-      const missingInstrumentIds = state.checks
-        .filter((c) => c.quantityConfirmed < c.quantityExpected)
-        .map((c) => c.instrumentId);
-
+      const performedBy = getCurrentUser();
       const record: ScanRecord = {
         id: state.scanId,
         trayId: state.tray.id,
         supplierId: state.supplier?.id ?? null,
+        caseId: null,
         capturedImageDataUrl: state.imageDataUrl,
         recognition: state.recognition,
         matchedIdentifier: state.selectedIdentifier,
         status: 'confirmed',
         expectedCount: state.tray.expectedInstrumentCount,
-        detectedCount,
+        detectedCount: computeDetectedCount(state.checks, state.extraInstruments),
         instrumentChecks: state.checks,
         extraInstruments: state.extraInstruments,
-        missingInstrumentIds,
+        missingInstrumentIds: computeMissingIds(state.checks),
         notes: state.notes || null,
-        performedBy: state.performedBy,
+        performedBy,
         createdAt: new Date().toISOString(),
         confirmedAt: new Date().toISOString(),
       };
@@ -174,7 +210,7 @@ export function ScannerFlow() {
           trayCode: state.tray.code,
           expectedCount: record.expectedCount,
           detectedCount: record.detectedCount,
-          missing: missingInstrumentIds.length,
+          missing: record.missingInstrumentIds.length,
           extra: state.extraInstruments.length,
         }),
       );
@@ -185,11 +221,142 @@ export function ScannerFlow() {
     }
   }, [patch, state]);
 
+  const handleConfirmIntakeAndOpenCase = useCallback(async () => {
+    if (!state.tray) return;
+    setSaving(true);
+    try {
+      const performedBy = getCurrentUser();
+      const record: ScanRecord = {
+        id: state.scanId,
+        trayId: state.tray.id,
+        supplierId: state.supplier?.id ?? null,
+        caseId: null,
+        capturedImageDataUrl: state.imageDataUrl,
+        recognition: state.recognition,
+        matchedIdentifier: state.selectedIdentifier,
+        status: 'confirmed',
+        expectedCount: state.tray.expectedInstrumentCount,
+        detectedCount: computeDetectedCount(state.checks, state.extraInstruments),
+        instrumentChecks: state.checks,
+        extraInstruments: state.extraInstruments,
+        missingInstrumentIds: computeMissingIds(state.checks),
+        notes: state.notes || null,
+        performedBy,
+        createdAt: new Date().toISOString(),
+        confirmedAt: new Date().toISOString(),
+      };
+
+      await dataProvider.saveScan(record);
+      await dataProvider.appendAuditEntry(
+        buildAuditEntry(state.scanId, 'scan_confirmed', {
+          trayCode: state.tray.code,
+          expectedCount: record.expectedCount,
+          detectedCount: record.detectedCount,
+        }),
+      );
+
+      const loanCase = await dataProvider.createCase({
+        trayId: state.tray.id,
+        supplierId: state.tray.supplierId,
+        intakeScanId: record.id,
+        operationNote: operationNote.trim() || null,
+        operationDate: operationDate || null,
+        performedBy,
+      });
+
+      await dataProvider.saveScan({ ...record, caseId: loanCase.id });
+      await dataProvider.appendAuditEntry({
+        id: crypto.randomUUID(),
+        entityType: 'case',
+        entityId: loanCase.id,
+        action: 'case_intake',
+        performedBy,
+        details: { trayCode: state.tray.code },
+        createdAt: new Date().toISOString(),
+      });
+
+      setOpenedCaseId(loanCase.id);
+      patch({ step: 'done' });
+    } finally {
+      setSaving(false);
+    }
+  }, [operationDate, operationNote, patch, state]);
+
+  const outtakeComparison = useMemo(() => {
+    if (mode.kind !== 'case-outtake') return null;
+    return compareCaseScans(
+      { instrumentChecks: mode.intakeScan.instrumentChecks, extraInstruments: mode.intakeScan.extraInstruments },
+      { instrumentChecks: state.checks, extraInstruments: state.extraInstruments },
+      getCurrentUser(),
+    );
+  }, [mode, state.checks, state.extraInstruments]);
+
+  const handleConfirmOuttakeAndClose = useCallback(async () => {
+    if (!state.tray || mode.kind !== 'case-outtake') return;
+    setSaving(true);
+    try {
+      const performedBy = getCurrentUser();
+      const finalComparison = compareCaseScans(
+        { instrumentChecks: mode.intakeScan.instrumentChecks, extraInstruments: mode.intakeScan.extraInstruments },
+        { instrumentChecks: state.checks, extraInstruments: state.extraInstruments },
+        performedBy,
+      );
+
+      const record: ScanRecord = {
+        id: state.scanId,
+        trayId: state.tray.id,
+        supplierId: state.supplier?.id ?? null,
+        caseId: mode.caseId,
+        capturedImageDataUrl: state.imageDataUrl,
+        recognition: state.recognition,
+        matchedIdentifier: state.selectedIdentifier,
+        status: 'confirmed',
+        expectedCount: state.tray.expectedInstrumentCount,
+        detectedCount: computeDetectedCount(state.checks, state.extraInstruments),
+        instrumentChecks: state.checks,
+        extraInstruments: state.extraInstruments,
+        missingInstrumentIds: computeMissingIds(state.checks),
+        notes: state.notes || null,
+        performedBy,
+        createdAt: new Date().toISOString(),
+        confirmedAt: new Date().toISOString(),
+      };
+
+      await dataProvider.saveScan(record);
+      await dataProvider.appendAuditEntry(
+        buildAuditEntry(state.scanId, 'scan_confirmed', {
+          trayCode: state.tray.code,
+          expectedCount: record.expectedCount,
+          detectedCount: record.detectedCount,
+        }),
+      );
+
+      await dataProvider.completeOuttake(mode.caseId, record.id, finalComparison);
+      await dataProvider.appendAuditEntry({
+        id: crypto.randomUUID(),
+        entityType: 'case',
+        entityId: mode.caseId,
+        action: 'case_compared',
+        performedBy,
+        details: {
+          hasDeviations: finalComparison.hasDeviations,
+          missing: finalComparison.instrumentDeltas.filter((d) => d.delta < 0).length,
+          extra: finalComparison.extraDeltas.filter((d) => d.outtakeQuantity > d.intakeQuantity).length,
+        },
+        createdAt: new Date().toISOString(),
+      });
+
+      patch({ step: 'done' });
+    } finally {
+      setSaving(false);
+    }
+  }, [mode, patch, state]);
+
   return (
     <div>
       <TopBar
         title={STEP_LABELS[state.step]}
-        subtitle="LEIH-SIEB SCANNER"
+        subtitle={MODE_SUBTITLE[mode.kind]}
         showBack={state.step !== 'capture' && state.step !== 'done'}
         onBack={() => {
           if (state.step === 'identify') patch({ step: 'capture' });
@@ -238,6 +405,7 @@ export function ScannerFlow() {
           tray={state.tray}
           supplier={state.supplier}
           imageDataUrl={state.imageDataUrl}
+          mismatchWarning={mismatchWarning ?? undefined}
           onContinue={() => patch({ step: 'instruments' })}
           onWrongMatch={() => patch({ step: 'identify' })}
         />
@@ -255,7 +423,7 @@ export function ScannerFlow() {
         />
       )}
 
-      {state.step === 'summary' && state.tray && (
+      {state.step === 'summary' && state.tray && mode.kind === 'standalone' && (
         <SummaryStep
           tray={state.tray}
           supplier={state.supplier}
@@ -268,7 +436,56 @@ export function ScannerFlow() {
         />
       )}
 
-      {state.step === 'done' && <DoneStep scanId={state.scanId} onStartNew={resetFlow} />}
+      {state.step === 'summary' && state.tray && mode.kind === 'case-intake' && (
+        <CaseIntakeSummaryStep
+          tray={state.tray}
+          supplier={state.supplier}
+          checks={state.checks}
+          extras={state.extraInstruments}
+          operationNote={operationNote}
+          onOperationNoteChange={setOperationNote}
+          operationDate={operationDate}
+          onOperationDateChange={setOperationDate}
+          onConfirmAndOpenCase={handleConfirmIntakeAndOpenCase}
+          saving={saving}
+        />
+      )}
+
+      {state.step === 'summary' && state.tray && mode.kind === 'case-outtake' && outtakeComparison && (
+        <CaseOuttakeSummaryStep
+          tray={state.tray}
+          supplier={state.supplier}
+          comparison={outtakeComparison}
+          notes={state.notes}
+          onNotesChange={(notes) => patch({ notes })}
+          onConfirmAndClose={handleConfirmOuttakeAndClose}
+          saving={saving}
+        />
+      )}
+
+      {state.step === 'done' && mode.kind === 'standalone' && (
+        <DoneStep detailPath={`/historie/${state.scanId}`} onStartNew={resetFlow} />
+      )}
+
+      {state.step === 'done' && mode.kind === 'case-intake' && openedCaseId && (
+        <DoneStep
+          detailPath={`/faelle/${openedCaseId}`}
+          detailLabel="Fall anzeigen"
+          message="Der Sieb-Fall wurde eröffnet und wartet auf den Ausgangs-Scan nach der Operation."
+          onStartNew={() => navigate('/faelle')}
+          startNewLabel="Zur Fälle-Übersicht"
+        />
+      )}
+
+      {state.step === 'done' && mode.kind === 'case-outtake' && (
+        <DoneStep
+          detailPath={`/faelle/${mode.caseId}`}
+          detailLabel="Vergleich anzeigen"
+          message="Der Ausgangs-Scan wurde gespeichert und mit dem Eingang verglichen."
+          onStartNew={() => navigate('/faelle')}
+          startNewLabel="Zur Fälle-Übersicht"
+        />
+      )}
     </div>
   );
 }
@@ -279,7 +496,7 @@ function buildAuditEntry(scanId: string, action: AuditLogEntry['action'], detail
     entityType: 'scan',
     entityId: scanId,
     action,
-    performedBy: 'AEMP-Mitarbeiter:in',
+    performedBy: getCurrentUser(),
     details,
     createdAt: new Date().toISOString(),
   };

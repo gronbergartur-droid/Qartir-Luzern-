@@ -109,6 +109,8 @@ export interface ScanRecord {
   id: UUID;
   trayId: UUID | null;
   supplierId: UUID | null;
+  /** Set when this scan is the intake or outtake scan of a LoanCase, null for a standalone check. */
+  caseId: UUID | null;
   capturedImageDataUrl: string | null;
   recognition: RecognitionResult | null;
   matchedIdentifier: string | null;
@@ -130,14 +132,134 @@ export type AuditAction =
   | 'scan_unmatched'
   | 'scan_confirmed'
   | 'scan_cancelled'
-  | 'instrument_manually_adjusted';
+  | 'instrument_manually_adjusted'
+  | 'supplier_created'
+  | 'supplier_updated'
+  | 'supplier_activated'
+  | 'supplier_deactivated'
+  | 'supplier_deleted'
+  | 'tray_created'
+  | 'tray_updated'
+  | 'case_intake'
+  | 'case_outtake'
+  | 'case_compared';
 
 export interface AuditLogEntry {
   id: UUID;
-  entityType: 'scan' | 'tray' | 'supplier';
+  entityType: 'scan' | 'tray' | 'supplier' | 'case';
   entityId: UUID;
   action: AuditAction;
   performedBy: string;
   details: Record<string, unknown>;
   createdAt: ISODateString;
+}
+
+// ---------------------------------------------------------------------------
+// Vorher/Nachher-Vergleich (loaner case lifecycle: intake -> operation -> outtake)
+// ---------------------------------------------------------------------------
+
+export type CaseStatus = 'outtake_pending' | 'compared';
+
+/** One instrument whose confirmed quantity differs between intake and outtake. */
+export interface CaseInstrumentDelta {
+  instrumentId: UUID;
+  name: string;
+  intakeQuantity: number;
+  outtakeQuantity: number;
+  /** outtakeQuantity - intakeQuantity; negative = missing, positive = surplus of a known instrument. */
+  delta: number;
+  critical: boolean;
+}
+
+/** An extra (non-reference) instrument whose presence differs between intake and outtake. */
+export interface CaseExtraDelta {
+  name: string;
+  /** Quantity of this named extra instrument at intake (0 if new at outtake). */
+  intakeQuantity: number;
+  /** Quantity of this named extra instrument at outtake (0 if resolved/removed by outtake). */
+  outtakeQuantity: number;
+}
+
+/**
+ * Heuristic suggestion that a missing reference instrument may have been
+ * swapped for an unexpected extra instrument ("falsches Instrument"). Based
+ * on name-similarity only - always assistive, never auto-confirmed.
+ */
+export interface CaseSubstitutionSuggestion {
+  missingInstrumentId: UUID | null;
+  missingName: string;
+  extraName: string;
+  /** 0..1 name-similarity score used to rank/threshold suggestions. */
+  similarity: number;
+}
+
+/**
+ * Result of comparing a case's confirmed intake checklist against its
+ * confirmed outtake checklist. Deliberately a deterministic diff of two
+ * human-confirmed records, not an automated image/vision analysis - see
+ * README "KI-Vergleich" for the reasoning.
+ */
+export interface CaseComparison {
+  instrumentDeltas: CaseInstrumentDelta[];
+  extraDeltas: CaseExtraDelta[];
+  substitutionSuggestions: CaseSubstitutionSuggestion[];
+  hasDeviations: boolean;
+  comparedAt: ISODateString;
+  comparedBy: string;
+}
+
+/**
+ * One physical loaner-tray-in-use lifecycle: an intake scan when the tray
+ * arrives, an optional outtake scan after the operation, and the comparison
+ * between them. Both scans are also persisted as ordinary ScanRecords (see
+ * ScanRecord.caseId), so Sieb-Historie keeps showing every scan regardless.
+ */
+export interface LoanCase {
+  id: UUID;
+  trayId: UUID;
+  supplierId: UUID;
+  status: CaseStatus;
+  /** Free-text reference to the operation this loaner tray was used for. */
+  operationNote: string | null;
+  operationDate: ISODateString | null;
+  intakeScanId: UUID;
+  outtakeScanId: UUID | null;
+  comparison: CaseComparison | null;
+  performedByIntake: string;
+  performedByOuttake: string | null;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+// ---------------------------------------------------------------------------
+// Create/update input shapes for the management (CRUD) screens
+// ---------------------------------------------------------------------------
+
+export interface SupplierInput {
+  name: string;
+  shortCode: string;
+  location: string | null;
+  specialties: string[];
+  loanServiceConfirmed: boolean;
+  loanServiceNote: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  contactNote: string | null;
+  source: string | null;
+  logoUrl: string | null;
+}
+
+export interface TrayInstrumentInput {
+  name: string;
+  quantity: number;
+  critical: boolean;
+}
+
+export interface TrayInput {
+  code: string;
+  aliases: string[];
+  name: string;
+  supplierId: UUID;
+  referencePhotoUrl: string | null;
+  instruments: TrayInstrumentInput[];
 }

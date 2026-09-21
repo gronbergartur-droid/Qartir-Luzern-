@@ -2,7 +2,19 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
 import type { AuditAction, AuditLogEntry } from '@/types/database';
-import { CircleCheck, FileSearch, ScanSearch, ShieldCheck, ShieldX, SlidersHorizontal } from 'lucide-react';
+import {
+  CircleCheck,
+  FileSearch,
+  GitCompareArrows,
+  PackagePlus,
+  ScanSearch,
+  ShieldCheck,
+  ShieldX,
+  SlidersHorizontal,
+  Trash2,
+  Truck,
+  UserPlus,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const ACTION_META: Record<AuditAction, { label: string; icon: typeof ShieldCheck; tone: string }> = {
@@ -12,6 +24,16 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof ShieldCheck
   scan_confirmed: { label: 'Kontrolle bestätigt', icon: ShieldCheck, tone: 'text-success-600 bg-success-50' },
   scan_cancelled: { label: 'Scan abgebrochen', icon: ShieldX, tone: 'text-danger-600 bg-danger-50' },
   instrument_manually_adjusted: { label: 'Manuell angepasst', icon: SlidersHorizontal, tone: 'text-warning-600 bg-warning-50' },
+  supplier_created: { label: 'Lieferant angelegt', icon: UserPlus, tone: 'text-brand-600 bg-brand-50' },
+  supplier_updated: { label: 'Lieferant bearbeitet', icon: Truck, tone: 'text-brand-600 bg-brand-50' },
+  supplier_activated: { label: 'Lieferant aktiviert', icon: Truck, tone: 'text-success-600 bg-success-50' },
+  supplier_deactivated: { label: 'Lieferant deaktiviert', icon: Truck, tone: 'text-ink-500 bg-ink-100' },
+  supplier_deleted: { label: 'Lieferant gelöscht', icon: Trash2, tone: 'text-danger-600 bg-danger-50' },
+  tray_created: { label: 'Sieb angelegt', icon: PackagePlus, tone: 'text-brand-600 bg-brand-50' },
+  tray_updated: { label: 'Sieb bearbeitet', icon: PackagePlus, tone: 'text-brand-600 bg-brand-50' },
+  case_intake: { label: 'Fall eröffnet (Eingang)', icon: ScanSearch, tone: 'text-brand-600 bg-brand-50' },
+  case_outtake: { label: 'Ausgang erfasst', icon: ScanSearch, tone: 'text-brand-600 bg-brand-50' },
+  case_compared: { label: 'Vergleich abgeschlossen', icon: GitCompareArrows, tone: 'text-success-600 bg-success-50' },
 };
 
 export function AuditLogPage() {

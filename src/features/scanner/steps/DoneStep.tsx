@@ -2,7 +2,21 @@ import { Button } from '@/components/ui/Button';
 import { PartyPopper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export function DoneStep({ scanId, onStartNew }: { scanId: string; onStartNew: () => void }) {
+interface DoneStepProps {
+  detailPath: string;
+  detailLabel?: string;
+  message?: string;
+  onStartNew: () => void;
+  startNewLabel?: string;
+}
+
+export function DoneStep({
+  detailPath,
+  detailLabel = 'Details anzeigen',
+  message = 'Der Scan wurde in der Sieb-Historie abgelegt und im Audit-Log protokolliert.',
+  onStartNew,
+  startNewLabel = 'Neuen Scan starten',
+}: DoneStepProps) {
   const navigate = useNavigate();
 
   return (
@@ -11,16 +25,14 @@ export function DoneStep({ scanId, onStartNew }: { scanId: string; onStartNew: (
         <PartyPopper size={30} />
       </div>
       <h2 className="text-lg font-semibold text-ink-900">Kontrolle gespeichert</h2>
-      <p className="text-sm text-ink-500">
-        Der Scan wurde in der Sieb-Historie abgelegt und im Audit-Log protokolliert.
-      </p>
+      <p className="text-sm text-ink-500">{message}</p>
 
       <div className="mt-4 flex w-full flex-col gap-2">
-        <Button size="lg" fullWidth onClick={() => navigate(`/historie/${scanId}`)}>
-          Details anzeigen
+        <Button size="lg" fullWidth onClick={() => navigate(detailPath)}>
+          {detailLabel}
         </Button>
         <Button variant="secondary" size="lg" fullWidth onClick={onStartNew}>
-          Neuen Scan starten
+          {startNewLabel}
         </Button>
       </div>
     </div>

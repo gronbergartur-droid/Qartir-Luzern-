@@ -1,13 +1,16 @@
-import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { dataProvider } from '@/services';
 import {
-  ArrowLeftRight,
+  CircleAlert,
   ClipboardList,
+  GitCompareArrows,
+  PackageOpen,
   ScanLine,
   ShieldCheck,
   Sparkles,
   Truck,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const modules = [
@@ -16,32 +19,48 @@ const modules = [
     icon: ClipboardList,
     title: 'Sieb-Historie',
     description: 'Alle durchgeführten Leih-Sieb-Kontrollen',
-    status: 'active' as const,
   },
   {
     to: '/audit',
     icon: ShieldCheck,
     title: 'Audit-Log',
     description: 'Lückenlose Nachverfolgung aller Aktionen',
-    status: 'active' as const,
   },
   {
     to: '/lieferanten',
     icon: Truck,
     title: 'Lieferantenverwaltung',
-    description: '13 bestätigte Leihservice-Anbieter (Schweiz)',
-    status: 'active' as const,
+    description: 'Anbieter verwalten, Siebe zuordnen',
   },
   {
-    to: '/vergleich',
-    icon: ArrowLeftRight,
+    to: '/faelle',
+    icon: GitCompareArrows,
     title: 'Vorher/Nachher-Vergleich',
-    description: 'Sieb-Zustand vor und nach der Operation',
-    status: 'soon' as const,
+    description: 'Eingang, Ausgang & Abweichungen',
   },
 ];
 
+interface Stats {
+  openCases: number;
+  activeSuppliers: number;
+  comparedCases: number;
+  casesWithDeviations: number;
+}
+
 export function DashboardPage() {
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    Promise.all([dataProvider.getCases(), dataProvider.getSuppliers()]).then(([cases, suppliers]) => {
+      setStats({
+        openCases: cases.filter((c) => c.status === 'outtake_pending').length,
+        activeSuppliers: suppliers.filter((s) => s.active).length,
+        comparedCases: cases.filter((c) => c.status === 'compared').length,
+        casesWithDeviations: cases.filter((c) => c.comparison?.hasDeviations).length,
+      });
+    });
+  }, []);
+
   return (
     <div className="px-4 pt-6">
       <div className="mb-6">
@@ -74,46 +93,72 @@ export function DashboardPage() {
         <span>KI-gestützte Erkennung – Ergebnisse müssen manuell bestätigt werden.</span>
       </div>
 
+      <h3 className="mb-3 mt-7 text-sm font-semibold uppercase tracking-wide text-ink-500">Überblick</h3>
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/faelle">
+          <StatCard icon={PackageOpen} label="Offene Leihsiebe" value={stats?.openCases} tone="brand" />
+        </Link>
+        <Link to="/lieferanten">
+          <StatCard icon={Truck} label="Aktive Lieferanten" value={stats?.activeSuppliers} tone="neutral" />
+        </Link>
+        <Link to="/faelle">
+          <StatCard icon={GitCompareArrows} label="Vergleiche abgeschlossen" value={stats?.comparedCases} tone="neutral" />
+        </Link>
+        <Link to="/faelle">
+          <StatCard
+            icon={CircleAlert}
+            label="Fälle mit Abweichung"
+            value={stats?.casesWithDeviations}
+            tone={stats && stats.casesWithDeviations > 0 ? 'warning' : 'neutral'}
+          />
+        </Link>
+      </div>
+
       <h3 className="mb-3 mt-7 text-sm font-semibold uppercase tracking-wide text-ink-500">
         Weitere Module
       </h3>
       <div className="grid grid-cols-2 gap-3">
         {modules.map((mod) => {
           const Icon = mod.icon;
-          const disabled = mod.status === 'soon';
-          const content = (
-            <Card
-              className={[
-                'flex h-full flex-col gap-2.5 p-4',
-                disabled ? 'opacity-60' : 'active:bg-ink-50',
-              ].join(' ')}
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                <Icon size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-ink-900">{mod.title}</p>
-                <p className="mt-0.5 text-xs text-ink-500">{mod.description}</p>
-              </div>
-              {disabled && (
-                <Badge tone="neutral">
-                  <span>Bald verfügbar</span>
-                </Badge>
-              )}
-            </Card>
-          );
-
-          return disabled ? (
-            <div key={mod.to} aria-disabled className="cursor-not-allowed">
-              {content}
-            </div>
-          ) : (
+          return (
             <Link key={mod.to} to={mod.to}>
-              {content}
+              <Card className="flex h-full flex-col gap-2.5 p-4 active:bg-ink-50">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                  <Icon size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">{mod.title}</p>
+                  <p className="mt-0.5 text-xs text-ink-500">{mod.description}</p>
+                </div>
+              </Card>
             </Link>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof PackageOpen;
+  label: string;
+  value: number | undefined;
+  tone: 'brand' | 'warning' | 'neutral';
+}) {
+  const toneClass =
+    tone === 'brand' ? 'bg-brand-50 text-brand-600' : tone === 'warning' ? 'bg-warning-50 text-warning-600' : 'bg-ink-100 text-ink-500';
+  return (
+    <Card className="p-4 active:bg-ink-50">
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${toneClass}`}>
+        <Icon size={16} />
+      </div>
+      <p className="mt-2 text-xl font-bold text-ink-900">{value ?? '–'}</p>
+      <p className="text-xs text-ink-500">{label}</p>
+    </Card>
   );
 }

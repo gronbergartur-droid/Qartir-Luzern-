@@ -1,24 +1,27 @@
 import { supabase } from '@/lib/supabase/client';
 import type {
   AuditLogEntry,
+  CaseComparison,
+  LoanCase,
   ScanRecord,
   Supplier,
+  SupplierInput,
   Tray,
+  TrayInput,
   TrayInstrument,
 } from '@/types/database';
 import type { DataProvider } from './dataProvider';
 
 /**
  * Backend for a provisioned Supabase project. Table/column names match
- * supabase/migrations/0001_init.sql. Row <-> domain-type mapping is kept
- * explicit (snake_case <-> camelCase) rather than relying on generated
- * types, so this file stays the single place that needs updating if the
- * schema evolves.
+ * supabase/migrations/*.sql. Row <-> domain-type mapping is kept explicit
+ * (snake_case <-> camelCase) rather than relying on generated types, so
+ * this file stays the single place that needs updating if the schema
+ * evolves.
  *
- * Not wired up by default yet (see services/index.ts) - future modules
- * (supplier management, tray history sync, before/after comparison, audit
- * log) build on top of this provider once VITE_SUPABASE_URL /
- * VITE_SUPABASE_ANON_KEY are set and the migrations have been applied.
+ * Not wired up by default (see services/index.ts) - activates once
+ * VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set and the migrations
+ * have been applied.
  */
 export class SupabaseDataProvider implements DataProvider {
   private get client() {
@@ -29,6 +32,10 @@ export class SupabaseDataProvider implements DataProvider {
     }
     return supabase;
   }
+
+  // ---------------------------------------------------------------------
+  // Suppliers
+  // ---------------------------------------------------------------------
 
   async getSuppliers(): Promise<Supplier[]> {
     const { data, error } = await this.client.from('suppliers').select('*').order('name');
@@ -41,6 +48,56 @@ export class SupabaseDataProvider implements DataProvider {
     if (error) throw error;
     return data ? mapSupplierRow(data) : null;
   }
+
+  async createSupplier(input: SupplierInput): Promise<Supplier> {
+    const { data, error } = await this.client
+      .from('suppliers')
+      .insert(mapSupplierInputToRow(input))
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapSupplierRow(data);
+  }
+
+  async updateSupplier(id: string, input: SupplierInput): Promise<Supplier> {
+    const { data, error } = await this.client
+      .from('suppliers')
+      .update(mapSupplierInputToRow(input))
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapSupplierRow(data);
+  }
+
+  async setSupplierActive(id: string, active: boolean): Promise<Supplier> {
+    const { data, error } = await this.client
+      .from('suppliers')
+      .update({ active })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapSupplierRow(data);
+  }
+
+  async deleteSupplier(id: string): Promise<void> {
+    const { count } = await this.client
+      .from('trays')
+      .select('id', { count: 'exact', head: true })
+      .eq('supplier_id', id);
+    if (count && count > 0) {
+      throw new Error(
+        'Lieferant wird noch von mindestens einem Sieb verwendet und kann nicht gelöscht werden. Stattdessen deaktivieren.',
+      );
+    }
+    const { error } = await this.client.from('suppliers').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // ---------------------------------------------------------------------
+  // Trays
+  // ---------------------------------------------------------------------
 
   async getTrays(): Promise<Tray[]> {
     const { data, error } = await this.client.from('trays').select('*').order('code');
@@ -70,6 +127,47 @@ export class SupabaseDataProvider implements DataProvider {
     return (data ?? []).map(mapInstrumentRow);
   }
 
+  async createTray(input: TrayInput): Promise<Tray> {
+    const { data, error } = await this.client
+      .from('trays')
+      .insert(mapTrayInputToRow(input))
+      .select('*')
+      .single();
+    if (error) throw error;
+    const tray = mapTrayRow(data);
+
+    const { error: instrumentsError } = await this.client
+      .from('tray_instruments')
+      .insert(mapInstrumentInputsToRows(tray.id, input.instruments));
+    if (instrumentsError) throw instrumentsError;
+
+    return tray;
+  }
+
+  async updateTray(id: string, input: TrayInput): Promise<Tray> {
+    const { data, error } = await this.client
+      .from('trays')
+      .update(mapTrayInputToRow(input))
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    const tray = mapTrayRow(data);
+
+    const { error: deleteError } = await this.client.from('tray_instruments').delete().eq('tray_id', id);
+    if (deleteError) throw deleteError;
+    const { error: insertError } = await this.client
+      .from('tray_instruments')
+      .insert(mapInstrumentInputsToRows(id, input.instruments));
+    if (insertError) throw insertError;
+
+    return tray;
+  }
+
+  // ---------------------------------------------------------------------
+  // Scans
+  // ---------------------------------------------------------------------
+
   async saveScan(scan: ScanRecord): Promise<ScanRecord> {
     const { data, error } = await this.client
       .from('scans')
@@ -95,6 +193,10 @@ export class SupabaseDataProvider implements DataProvider {
     return data ? mapScanRow(data) : null;
   }
 
+  // ---------------------------------------------------------------------
+  // Audit log
+  // ---------------------------------------------------------------------
+
   async appendAuditEntry(entry: AuditLogEntry): Promise<AuditLogEntry> {
     const { data, error } = await this.client
       .from('audit_log')
@@ -112,6 +214,77 @@ export class SupabaseDataProvider implements DataProvider {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []).map(mapAuditRow);
+  }
+
+  // ---------------------------------------------------------------------
+  // Loaner cases (Vorher/Nachher-Vergleich)
+  // ---------------------------------------------------------------------
+
+  async createCase(input: {
+    trayId: string;
+    supplierId: string;
+    intakeScanId: string;
+    operationNote: string | null;
+    operationDate: string | null;
+    performedBy: string;
+  }): Promise<LoanCase> {
+    const { data, error } = await this.client
+      .from('loan_cases')
+      .insert({
+        tray_id: input.trayId,
+        supplier_id: input.supplierId,
+        status: 'outtake_pending',
+        operation_note: input.operationNote,
+        operation_date: input.operationDate,
+        intake_scan_id: input.intakeScanId,
+        performed_by_intake: input.performedBy,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapCaseRow(data);
+  }
+
+  async getCases(): Promise<LoanCase[]> {
+    const { data, error } = await this.client
+      .from('loan_cases')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(mapCaseRow);
+  }
+
+  async getCase(id: string): Promise<LoanCase | null> {
+    const { data, error } = await this.client.from('loan_cases').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data ? mapCaseRow(data) : null;
+  }
+
+  async getCasesBySupplier(supplierId: string): Promise<LoanCase[]> {
+    const { data, error } = await this.client
+      .from('loan_cases')
+      .select('*')
+      .eq('supplier_id', supplierId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(mapCaseRow);
+  }
+
+  async completeOuttake(caseId: string, outtakeScanId: string, comparison: CaseComparison): Promise<LoanCase> {
+    const { data, error } = await this.client
+      .from('loan_cases')
+      .update({
+        status: 'compared',
+        outtake_scan_id: outtakeScanId,
+        comparison,
+        performed_by_outtake: comparison.comparedBy,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', caseId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapCaseRow(data);
   }
 }
 
@@ -136,6 +309,22 @@ function mapSupplierRow(row: any): Supplier {
   };
 }
 
+function mapSupplierInputToRow(input: SupplierInput) {
+  return {
+    name: input.name,
+    short_code: input.shortCode,
+    location: input.location,
+    specialties: input.specialties,
+    loan_service_confirmed: input.loanServiceConfirmed,
+    loan_service_note: input.loanServiceNote,
+    contact_phone: input.contactPhone,
+    contact_email: input.contactEmail,
+    contact_note: input.contactNote,
+    source: input.source,
+    logo_url: input.logoUrl,
+  };
+}
+
 function mapTrayRow(row: any): Tray {
   return {
     id: row.id,
@@ -149,6 +338,27 @@ function mapTrayRow(row: any): Tray {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function mapTrayInputToRow(input: TrayInput) {
+  return {
+    code: input.code,
+    aliases: input.aliases,
+    name: input.name,
+    supplier_id: input.supplierId,
+    reference_photo_url: input.referencePhotoUrl,
+    expected_instrument_count: input.instruments.reduce((sum, i) => sum + i.quantity, 0),
+  };
+}
+
+function mapInstrumentInputsToRows(trayId: string, instruments: TrayInput['instruments']) {
+  return instruments.map((instrument, index) => ({
+    tray_id: trayId,
+    name: instrument.name,
+    quantity: instrument.quantity,
+    position: index + 1,
+    critical: instrument.critical,
+  }));
 }
 
 function mapInstrumentRow(row: any): TrayInstrument {
@@ -168,6 +378,7 @@ function mapScanRow(row: any): ScanRecord {
     id: row.id,
     trayId: row.tray_id,
     supplierId: row.supplier_id,
+    caseId: row.case_id,
     capturedImageDataUrl: row.captured_image_url,
     recognition: row.recognition,
     matchedIdentifier: row.matched_identifier,
@@ -189,6 +400,7 @@ function mapScanToRow(scan: ScanRecord) {
     id: scan.id,
     tray_id: scan.trayId,
     supplier_id: scan.supplierId,
+    case_id: scan.caseId,
     // Large captured images belong in Supabase Storage in production; this
     // column is a placeholder for a storage object path/URL, not a base64 blob.
     captured_image_url: scan.capturedImageDataUrl,
@@ -228,5 +440,23 @@ function mapAuditToRow(entry: AuditLogEntry) {
     performed_by: entry.performedBy,
     details: entry.details,
     created_at: entry.createdAt,
+  };
+}
+
+function mapCaseRow(row: any): LoanCase {
+  return {
+    id: row.id,
+    trayId: row.tray_id,
+    supplierId: row.supplier_id,
+    status: row.status,
+    operationNote: row.operation_note,
+    operationDate: row.operation_date,
+    intakeScanId: row.intake_scan_id,
+    outtakeScanId: row.outtake_scan_id,
+    comparison: row.comparison,
+    performedByIntake: row.performed_by_intake,
+    performedByOuttake: row.performed_by_outtake,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
