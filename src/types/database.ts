@@ -12,9 +12,20 @@ export interface Supplier {
   id: UUID;
   name: string;
   shortCode: string;
-  contactName: string | null;
-  contactEmail: string | null;
+  /** Swiss site, e.g. "Biberist, SO". */
+  location: string | null;
+  /** Fachgebiete / typische Sets, e.g. "Hüfte", "Traumatologie". */
+  specialties: string[];
+  /** Whether a loaner/rental instrument service was confirmed for this supplier. */
+  loanServiceConfirmed: boolean;
+  /** Free-text description of the loan service, e.g. "ELSA European Loan Service". */
+  loanServiceNote: string | null;
   contactPhone: string | null;
+  contactEmail: string | null;
+  /** Address or other free-text contact hint that doesn't fit phone/email. */
+  contactNote: string | null;
+  /** Where this supplier's data was sourced from, for traceability. */
+  source: string | null;
   logoUrl: string | null;
   active: boolean;
   createdAt: ISODateString;

@@ -29,8 +29,8 @@ const modules = [
     to: '/lieferanten',
     icon: Truck,
     title: 'Lieferantenverwaltung',
-    description: 'Kontakte, Konditionen und Sieb-Zuordnung',
-    status: 'soon' as const,
+    description: '13 bestätigte Leihservice-Anbieter (Schweiz)',
+    status: 'active' as const,
   },
   {
     to: '/vergleich',

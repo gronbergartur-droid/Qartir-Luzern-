@@ -73,18 +73,17 @@ Die RLS-Policies in der Migration sind bewusst grob gehalten (jede
 authentifizierte Person darf lesen/schreiben) und sollten verfeinert werden,
 sobald Benutzer-/Standort-/Rollenverwaltung eingeführt wird.
 
-## Geplante Module (Roadmap)
+## Module
 
-Bereits in der Navigation und im Datenmodell vorgesehen, aktuell als
-„Bald verfügbar“ markiert:
-
-- **Lieferantenverwaltung** – Stammdaten, Kontakte, Sieb-Zuordnung
-  (`suppliers`-Tabelle bereits vorhanden)
-- **Sieb-Historie** – bereits aktiv, zeigt alle bestätigten Scans
-- **Vorher/Nachher-Vergleich** – zweiter Scan nach der Operation, verknüpft
-  mit dem Ausgangs-Scan, automatischer Abgleich von Abweichungen
-- **Audit-Log** – bereits aktiv, protokolliert jede Sieb-Zuordnung und
-  Bestätigung lückenlos und unveränderbar
+- **Sieb-Historie** – aktiv, zeigt alle bestätigten Scans
+- **Audit-Log** – aktiv, protokolliert jede Sieb-Zuordnung und Bestätigung
+  lückenlos und unveränderbar
+- **Lieferantenverwaltung** – aktiv als durchsuchbares Verzeichnis von 13
+  bestätigten Schweizer Leihservice-Anbietern (Standort, Fachgebiete,
+  Kontakt, Quelle); Bearbeiten/Anlegen neuer Lieferanten ist noch offen
+- **Vorher/Nachher-Vergleich** – geplant: zweiter Scan nach der Operation,
+  verknüpft mit dem Ausgangs-Scan, automatischer Abgleich von Abweichungen
+  (aktuell als „Bald verfügbar“ markiert)
 
 ## Entwicklung
 
