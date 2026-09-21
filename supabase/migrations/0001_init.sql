@@ -95,6 +95,7 @@ create table if not exists scans (
 );
 
 create index if not exists scans_tray_id_idx on scans (tray_id);
+create index if not exists scans_supplier_id_idx on scans (supplier_id);
 create index if not exists scans_case_id_idx on scans (case_id);
 create index if not exists scans_created_at_idx on scans (created_at desc);
 create index if not exists scans_status_idx on scans (status);
@@ -126,6 +127,8 @@ alter table scans
 
 create index if not exists loan_cases_tray_id_idx on loan_cases (tray_id);
 create index if not exists loan_cases_supplier_id_idx on loan_cases (supplier_id);
+create index if not exists loan_cases_intake_scan_id_idx on loan_cases (intake_scan_id);
+create index if not exists loan_cases_outtake_scan_id_idx on loan_cases (outtake_scan_id);
 create index if not exists loan_cases_status_idx on loan_cases (status);
 create index if not exists loan_cases_created_at_idx on loan_cases (created_at desc);
 
@@ -156,12 +159,15 @@ create index if not exists audit_log_created_at_idx on audit_log (created_at des
 -- updated_at maintenance
 -- ---------------------------------------------------------------------------
 create or replace function set_updated_at()
-returns trigger as $$
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
 begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$;
 
 drop trigger if exists trays_set_updated_at on trays;
 create trigger trays_set_updated_at

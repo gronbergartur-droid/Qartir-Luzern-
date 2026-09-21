@@ -93,14 +93,25 @@ ein echtes Supabase-Projekt angepasst werden muss.
 
 1. Migration `supabase/migrations/0001_init.sql` auf einem Supabase-Projekt
    ausführen (optional: `supabase/seed.sql` für Demo-Daten).
-2. `.env.local` aus `.env.example` erstellen und
-   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` eintragen.
-3. Ohne diese beiden Variablen läuft die App automatisch mit dem lokalen
+2. **Anonymous Sign-Ins aktivieren**: Supabase-Dashboard → Authentication →
+   Sign In / Providers → *Anonymous* einschalten. Die RLS-Policies greifen
+   auf `to authenticated` (nicht `anon`), damit ein öffentlicher
+   Publishable Key allein keinen Zugriff auf Spitaldaten gibt. Da die App
+   noch kein echtes Login hat (siehe „Benutzer-Kennzeichen" unten), meldet
+   sie sich beim Start selbst anonym an, um eine `authenticated`-Session zu
+   bekommen (`src/lib/supabase/client.ts` → `ensureSupabaseSession()`).
+   Ohne diesen Schritt schlagen alle Datenbankzugriffe mit einem
+   RLS-Fehler fehl.
+3. `.env.local` aus `.env.example` erstellen und
+   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (Publishable Key)
+   eintragen.
+4. Ohne diese beiden Variablen läuft die App automatisch mit dem lokalen
    Mock-Provider (`localStorage`) weiter – kein Codeänderung nötig.
 
 Die RLS-Policies in der Migration sind bewusst grob gehalten (jede
 authentifizierte Person darf lesen/schreiben) und sollten verfeinert werden,
-sobald Benutzer-/Standort-/Rollenverwaltung eingeführt wird.
+sobald echte Benutzer-/Standort-/Rollenverwaltung eingeführt wird – die
+anonyme Session ist ein Übergangszustand, kein Ersatz für richtiges Login.
 
 ## Module
 
