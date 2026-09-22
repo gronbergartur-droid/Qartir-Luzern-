@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
 import type { LoanCase, ScanRecord, Supplier, Tray } from '@/types/database';
-import { ArrowRight, Calendar, ScanLine, Truck } from 'lucide-react';
+import { ArrowRight, Calendar, Camera, Mail, ScanLine, Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ComparisonResultView } from './ComparisonResultView';
@@ -100,6 +100,36 @@ export function CaseDetailPage() {
           <div className="mt-6">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">Vergleich</p>
             <ComparisonResultView comparison={loanCase.comparison} />
+          </div>
+        )}
+
+        {loanCase.status === 'compared' && (
+          <div className="mt-6">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+              <Camera size={14} /> Sieb-Bereitschaft
+            </p>
+            {loanCase.readinessNotifiedAt ? (
+              <Card className="p-3.5">
+                <div className="flex items-center gap-2 text-success-700">
+                  <Mail size={16} />
+                  <p className="text-sm font-medium">Lieferant benachrichtigt</p>
+                </div>
+                <p className="mt-1 text-xs text-ink-500">{formatDate(loanCase.readinessNotifiedAt)}</p>
+                {loanCase.hygienePassportPhotoUrl && (
+                  <img
+                    src={loanCase.hygienePassportPhotoUrl}
+                    alt="Hygiene-Pass"
+                    className="mt-3 max-h-48 w-full rounded-xl object-contain"
+                  />
+                )}
+              </Card>
+            ) : (
+              <Link to={`/faelle/${loanCase.id}/hygiene-pass`}>
+                <Button size="lg" fullWidth icon={<Camera size={16} />}>
+                  Hygiene-Pass fotografieren & Lieferant benachrichtigen
+                </Button>
+              </Link>
+            )}
           </div>
         )}
       </div>

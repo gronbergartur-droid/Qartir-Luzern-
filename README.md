@@ -138,6 +138,14 @@ ein echtes Supabase-Projekt angepasst werden muss.
   Verwechslungs-Vorschläge – siehe „KI-Vergleich“ oben). Jeder erkannte Code
   wird beim Ausgang gegen das erwartete Sieb geprüft; bei Abweichung erscheint
   ein Warnhinweis, ohne den Ablauf zu blockieren.
+- **Sieb-Bereitschaft nach Sterilisation** (auf der Fall-Detailseite, sobald
+  der Ausgang erfasst ist) – der Hygiene-Pass der aktuellen
+  Sterilisationscharge (Chargen-Ausdruck, bei jedem Zyklus anders) wird
+  fotografiert; die App sendet dem hinterlegten Lieferanten-Kontakt
+  automatisch eine E-Mail mit Standardtext und dem Foto als Anhang, dass das
+  Sieb abholbereit ist. Versand läuft über die Edge Function
+  `supabase/functions/send-sieb-ready-email` (Resend) – siehe
+  „Sieb-Bereitschaft per E-Mail“ unten für die Einrichtung.
 - **Sieb-Historie** (`/historie`) – jeder einzelne Scan (auch Eingangs-/
   Ausgangs-Scans eines Falls) bleibt hier zusätzlich einsehbar.
 - **Audit-Log** (`/audit`) – jede Lieferanten-, Sieb- und Fall-Aktion sowie
@@ -222,20 +230,46 @@ Einmalig einzurichten:
 3. Danach läuft jeder Push auf `main` automatisch durch Build + Deploy;
    die URL lautet `https://<owner>.github.io/<repo>/`.
 
-**Wichtig vor dem produktiven Einsatz**: Der komplette Login-/Registrierungs-
-/Freischaltungs-Ablauf wurde bisher nur auf Datenbankebene verifiziert (RLS-
-Rollensimulation direkt gegen Postgres, siehe PR #3) – ein echter Klick-Test
-im Browser (Login-Formular → Supabase-Session → Benutzeroberfläche) war aus
-dieser Entwicklungsumgebung heraus nicht möglich (Netzwerk-Policy blockiert
-direkten Zugriff auf `*.supabase.co`). Nach dem ersten Deploy daher unbedingt
-manuell in einem normalen Browser durchklicken: Registrierung, Warten-auf-
-Freigabe-Bildschirm, Freischaltung durch den Admin unter `/benutzer`, Login,
-Abmelden.
+Der Login-/Registrierungs-/Freischaltungs-Ablauf wurde live im echten Browser
+gegen die produktive Seite verifiziert (Registrierung, Bestätigungs-E-Mail,
+Login, Admin-Freischaltung unter `/benutzer`).
 
 Für Deployments ausserhalb von GitHub Pages: `vite.config.ts` liest den
 Basis-Pfad aus `VITE_BASE_PATH` (Default `/`) – für einen Server, der die
 App an der Domain-Wurzel ausliefert, muss diese Variable beim Build nicht
 gesetzt werden.
+
+## Sieb-Bereitschaft per E-Mail (Resend)
+
+Nach dem Ausgangs-Scan eines Sieb-Falls kann der Hygiene-Pass der aktuellen
+Sterilisationscharge fotografiert werden; die App benachrichtigt daraufhin
+automatisch den Lieferanten per E-Mail (Standardtext + Foto als Anhang), dass
+das Sieb abholbereit ist (`supabase/functions/send-sieb-ready-email`). Diese
+Funktion läuft mit dem JWT der anmeldenden Person, nicht mit dem Service-Role-
+Key – dieselben RLS-Regeln wie überall sonst gelten also auch hier.
+
+Einrichtung (einmalig):
+
+1. Konto auf [resend.com](https://resend.com) anlegen (kostenloser Tarif
+   reicht für den Start) und einen API-Key erstellen.
+2. Im Supabase-Dashboard unter **Edge Functions → send-sieb-ready-email →
+   Secrets** (oder projektweit unter **Project Settings → Edge Functions →
+   Secrets**) die Variable `RESEND_API_KEY` mit diesem Key anlegen.
+3. **Wichtig für den Produktivbetrieb**: Ohne eigene verifizierte Absender-
+   Domain bei Resend funktioniert nur der Sandbox-Absender
+   `onboarding@resend.dev` – dieser liefert ausschliesslich an die beim
+   Resend-Konto selbst hinterlegte E-Mail-Adresse aus, nicht an beliebige
+   Lieferanten. Für echten Versand an Lieferanten-Adressen muss bei Resend
+   eine eigene Domain verifiziert und deren Absenderadresse als zusätzliche
+   Secret-Variable `RESEND_FROM_EMAIL` (z. B. `sieb-logistik@spital.ch`)
+   hinterlegt werden.
+4. Voraussetzung pro Lieferant: eine hinterlegte E-Mail-Adresse in der
+   Lieferantenverwaltung (`contactEmail`) – ohne diese blockiert die App den
+   Versand mit einer entsprechenden Fehlermeldung.
+
+Ohne gesetzten `RESEND_API_KEY` liefert die Funktion einen klaren Fehler
+zurück, statt fehlzuschlagen; die App zeigt diesen direkt auf der
+Hygiene-Pass-Seite an.
 
 ## OCR offline betreiben
 

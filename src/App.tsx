@@ -3,6 +3,7 @@ import { AuditLogPage } from '@/features/audit/AuditLogPage';
 import { CaseDetailPage } from '@/features/cases/CaseDetailPage';
 import { CaseOuttakeRoute } from '@/features/cases/CaseOuttakeRoute';
 import { CasesPage } from '@/features/cases/CasesPage';
+import { HygienePassPage } from '@/features/cases/HygienePassPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ScanDetailPage } from '@/features/history/ScanDetailPage';
 import { HistoryPage } from '@/features/history/HistoryPage';
@@ -56,6 +57,7 @@ function App() {
         />
         <Route path="/faelle/:caseId" element={<CaseDetailPage />} />
         <Route path="/faelle/:caseId/ausgang" element={<CaseOuttakeRoute />} />
+        <Route path="/faelle/:caseId/hygiene-pass" element={<HygienePassPage />} />
         <Route path="/tarife" element={<PricingPage />} />
         <Route path="/benutzer" element={<UserManagementPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
