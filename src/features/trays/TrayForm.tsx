@@ -71,7 +71,7 @@ export function TrayForm({
         code: code.trim().toUpperCase(),
         aliases: aliases
           .split(',')
-          .map((a) => a.trim())
+          .map((a) => a.trim().toUpperCase())
           .filter(Boolean),
         name: name.trim(),
         supplierId,
