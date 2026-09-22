@@ -58,6 +58,12 @@ export interface DataProvider {
   getCasesBySupplier(supplierId: string): Promise<LoanCase[]>;
   /** Attaches a confirmed outtake scan (already saved via saveScan) and its comparison to a case. */
   completeOuttake(caseId: string, outtakeScanId: string, comparison: CaseComparison): Promise<LoanCase>;
+  /**
+   * Attaches a freshly-photographed hygiene passport (sterilization batch
+   * proof) and e-mails the supplier that the Sieb is ready for pickup. Only
+   * meaningful once the case is 'compared' (after the outtake scan).
+   */
+  notifySupplierReady(caseId: string, hygienePassportPhotoUrl: string): Promise<LoanCase>;
 
   /** The authenticated caller's own profile (role, active status), or null if not signed in / not provisioned yet. */
   getCurrentProfile(): Promise<UserProfile | null>;

@@ -142,7 +142,8 @@ export type AuditAction =
   | 'tray_updated'
   | 'case_intake'
   | 'case_outtake'
-  | 'case_compared';
+  | 'case_compared'
+  | 'case_readiness_notified';
 
 export interface AuditLogEntry {
   id: UUID;
@@ -227,6 +228,10 @@ export interface LoanCase {
   comparison: CaseComparison | null;
   performedByIntake: string;
   performedByOuttake: string | null;
+  /** Photo of the sterilization batch's hygiene passport, taken after the outtake scan - a new one each cycle. */
+  hygienePassportPhotoUrl: string | null;
+  /** When the supplier was e-mailed that this Sieb is ready for pickup/return - null until sent. */
+  readinessNotifiedAt: ISODateString | null;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }

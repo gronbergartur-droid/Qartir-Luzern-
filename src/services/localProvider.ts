@@ -273,6 +273,8 @@ export class LocalDataProvider implements DataProvider {
       comparison: null,
       performedByIntake: input.performedBy,
       performedByOuttake: null,
+      hygienePassportPhotoUrl: null,
+      readinessNotifiedAt: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -305,6 +307,21 @@ export class LocalDataProvider implements DataProvider {
       comparison,
       performedByOuttake: comparison.comparedBy,
       updatedAt: new Date().toISOString(),
+    };
+    this.cases = this.cases.map((c) => (c.id === caseId ? updated : c));
+    writeToStorage(CASES_KEY, this.cases);
+    return updated;
+  }
+
+  async notifySupplierReady(caseId: string, hygienePassportPhotoUrl: string): Promise<LoanCase> {
+    const existing = this.cases.find((c) => c.id === caseId);
+    if (!existing) throw new Error('Fall nicht gefunden.');
+    // No real backend in local/mock mode - simulate the notification without
+    // actually sending an e-mail (there is no Edge Function/Resend here).
+    const updated: LoanCase = {
+      ...existing,
+      hygienePassportPhotoUrl,
+      readinessNotifiedAt: new Date().toISOString(),
     };
     this.cases = this.cases.map((c) => (c.id === caseId ? updated : c));
     writeToStorage(CASES_KEY, this.cases);

@@ -303,6 +303,18 @@ export class SupabaseDataProvider implements DataProvider {
     return mapCaseRow(data);
   }
 
+  async notifySupplierReady(caseId: string, hygienePassportPhotoUrl: string): Promise<LoanCase> {
+    const { data, error } = await this.client.functions.invoke('send-sieb-ready-email', {
+      body: { caseId, hygienePassportPhotoDataUrl: hygienePassportPhotoUrl },
+    });
+    if (error) {
+      // Edge Function errors carry the JSON body (incl. our German message) on error.context.
+      const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);
+      throw new Error(detail?.error ?? error.message);
+    }
+    return mapCaseRow(data);
+  }
+
   // ---------------------------------------------------------------------
   // Users / roles
   // ---------------------------------------------------------------------
@@ -516,6 +528,8 @@ function mapCaseRow(row: any): LoanCase {
     comparison: row.comparison,
     performedByIntake: row.performed_by_intake,
     performedByOuttake: row.performed_by_outtake,
+    hygienePassportPhotoUrl: row.hygiene_passport_photo_url,
+    readinessNotifiedAt: row.readiness_notified_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
