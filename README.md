@@ -190,6 +190,40 @@ npm run lint
 Die Kamera-/OCR-Funktionen benötigen HTTPS oder `localhost`, da Browser den
 Zugriff auf `getUserMedia` sonst blockieren.
 
+## Deployment (GitHub Pages)
+
+Die App lässt sich als reine statische SPA auf GitHub Pages veröffentlichen
+(`.github/workflows/deploy-pages.yml`, baut bei jedem Push auf `main`).
+Einmalig einzurichten:
+
+1. **Settings → Pages → Source: „GitHub Actions"** im Repository aktivieren
+   (dieser eine Schritt lässt sich nicht per API/Workflow erledigen).
+2. **Settings → Secrets and variables → Actions → Variables** – zwei
+   Repository-Variablen anlegen: `VITE_SUPABASE_URL` und
+   `VITE_SUPABASE_ANON_KEY` (Werte aus `.env.local`/Supabase-Dashboard).
+   Das ist der öffentliche Publishable Key, keine geheime Server-Rolle –
+   der Zugriffsschutz kommt ausschliesslich über RLS
+   (`supabase/migrations/0002_auth_roles.sql`), nicht über die
+   Geheimhaltung dieses Keys. Ohne diese beiden Variablen baut die
+   Seite im lokalen Mock-Modus.
+3. Danach läuft jeder Push auf `main` automatisch durch Build + Deploy;
+   die URL lautet `https://<owner>.github.io/<repo>/`.
+
+**Wichtig vor dem produktiven Einsatz**: Der komplette Login-/Registrierungs-
+/Freischaltungs-Ablauf wurde bisher nur auf Datenbankebene verifiziert (RLS-
+Rollensimulation direkt gegen Postgres, siehe PR #3) – ein echter Klick-Test
+im Browser (Login-Formular → Supabase-Session → Benutzeroberfläche) war aus
+dieser Entwicklungsumgebung heraus nicht möglich (Netzwerk-Policy blockiert
+direkten Zugriff auf `*.supabase.co`). Nach dem ersten Deploy daher unbedingt
+manuell in einem normalen Browser durchklicken: Registrierung, Warten-auf-
+Freigabe-Bildschirm, Freischaltung durch den Admin unter `/benutzer`, Login,
+Abmelden.
+
+Für Deployments ausserhalb von GitHub Pages: `vite.config.ts` liest den
+Basis-Pfad aus `VITE_BASE_PATH` (Default `/`) – für einen Server, der die
+App an der Domain-Wurzel ausliefert, muss diese Variable beim Build nicht
+gesetzt werden.
+
 ## OCR offline betreiben
 
 Die OCR-Engine (Worker-Skript + Wasm-Core von tesseract.js) liegt lokal unter

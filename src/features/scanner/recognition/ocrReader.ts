@@ -13,6 +13,10 @@ let workerPromise: Promise<Worker> | null = null;
  * dependency on a third-party CDN. Only the language model ("traineddata")
  * still defaults to tesseract.js's CDN unless VITE_TESSERACT_LANG_PATH
  * points at an internally hosted copy - see README for the offline setup.
+ *
+ * Paths are built from import.meta.env.BASE_URL (not a bare "/") so they
+ * still resolve when the app is served from a sub-path, e.g. GitHub Pages'
+ * /<repo>/.
  */
 const langPath = import.meta.env.VITE_TESSERACT_LANG_PATH as string | undefined;
 
@@ -20,8 +24,8 @@ const langPath = import.meta.env.VITE_TESSERACT_LANG_PATH as string | undefined;
 function getWorker(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = createWorker('eng', undefined, {
-      workerPath: '/tesseract/worker.min.js',
-      corePath: '/tesseract/tesseract-core-lstm.wasm.js',
+      workerPath: `${import.meta.env.BASE_URL}tesseract/worker.min.js`,
+      corePath: `${import.meta.env.BASE_URL}tesseract/tesseract-core-lstm.wasm.js`,
       ...(langPath ? { langPath } : {}),
       logger: () => {
         // Intentionally silent; caller reports coarse progress instead.
