@@ -104,7 +104,13 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        // Send the confirmation link back to wherever this app is actually
+        // running (must also be added to Authentication -> URL
+        // Configuration -> Redirect URLs in the Supabase dashboard).
+        emailRedirectTo: window.location.origin + window.location.pathname,
+      },
     });
     return error ? translateAuthError(error.message) : null;
   };
