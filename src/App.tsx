@@ -13,6 +13,7 @@ import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage';
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage';
 import { CreateTrayPage } from '@/features/trays/CreateTrayPage';
 import { EditTrayPage } from '@/features/trays/EditTrayPage';
+import { UserManagementPage } from '@/features/users/UserManagementPage';
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
@@ -56,6 +57,7 @@ function App() {
         <Route path="/faelle/:caseId" element={<CaseDetailPage />} />
         <Route path="/faelle/:caseId/ausgang" element={<CaseOuttakeRoute />} />
         <Route path="/tarife" element={<PricingPage />} />
+        <Route path="/benutzer" element={<UserManagementPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

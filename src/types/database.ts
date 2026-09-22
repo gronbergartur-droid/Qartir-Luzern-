@@ -263,3 +263,35 @@ export interface TrayInput {
   referencePhotoUrl: string | null;
   instruments: TrayInstrumentInput[];
 }
+
+// ---------------------------------------------------------------------------
+// Users / roles (real Supabase Auth - see supabase/migrations/0002_auth_roles.sql)
+// ---------------------------------------------------------------------------
+
+export type UserRole = 'admin' | 'op_leitung' | 'mitarbeiter' | 'lieferant';
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Admin',
+  op_leitung: 'OP-Leitung',
+  mitarbeiter: 'Mitarbeiter:in',
+  lieferant: 'Lieferant',
+};
+
+/** One authenticated account. Newly registered accounts start with active=false until an admin approves them. */
+export interface UserProfile {
+  id: UUID;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  /** Set for role = 'lieferant' accounts, linking them to their own supplier. */
+  supplierId: UUID | null;
+  active: boolean;
+  createdAt: ISODateString;
+}
+
+export interface UserProfileUpdateInput {
+  displayName?: string;
+  role?: UserRole;
+  supplierId?: UUID | null;
+  active?: boolean;
+}

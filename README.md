@@ -81,6 +81,10 @@ src/
 supabase/
   migrations/0001_init.sql  Schema: suppliers, trays, tray_instruments,
                              scans, loan_cases, audit_log (inkl. RLS-Policies)
+  migrations/0002_auth_roles.sql  Echtes Supabase Auth: profiles-Tabelle,
+                             Rollen (admin/op_leitung/mitarbeiter/lieferant),
+                             verschärfte RLS (aktives Profil + manipulations-
+                             sichere performed_by-Zuordnung)
   seed.sql                  Demo-Daten, analog zu data/referenceData.ts
 ```
 
@@ -91,27 +95,29 @@ ein echtes Supabase-Projekt angepasst werden muss.
 
 ## Supabase aktivieren
 
-1. Migration `supabase/migrations/0001_init.sql` auf einem Supabase-Projekt
-   ausführen (optional: `supabase/seed.sql` für Demo-Daten).
-2. **Anonymous Sign-Ins aktivieren**: Supabase-Dashboard → Authentication →
-   Sign In / Providers → *Anonymous* einschalten. Die RLS-Policies greifen
-   auf `to authenticated` (nicht `anon`), damit ein öffentlicher
-   Publishable Key allein keinen Zugriff auf Spitaldaten gibt. Da die App
-   noch kein echtes Login hat (siehe „Benutzer-Kennzeichen" unten), meldet
-   sie sich beim Start selbst anonym an, um eine `authenticated`-Session zu
-   bekommen (`src/lib/supabase/client.ts` → `ensureSupabaseSession()`).
-   Ohne diesen Schritt schlagen alle Datenbankzugriffe mit einem
-   RLS-Fehler fehl.
-3. `.env.local` aus `.env.example` erstellen und
+1. Migrationen `supabase/migrations/0001_init.sql` und
+   `supabase/migrations/0002_auth_roles.sql` (in dieser Reihenfolge) auf
+   einem Supabase-Projekt ausführen (optional: `supabase/seed.sql` für
+   Demo-Daten).
+2. `.env.local` aus `.env.example` erstellen und
    `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (Publishable Key)
    eintragen.
-4. Ohne diese beiden Variablen läuft die App automatisch mit dem lokalen
-   Mock-Provider (`localStorage`) weiter – kein Codeänderung nötig.
-
-Die RLS-Policies in der Migration sind bewusst grob gehalten (jede
-authentifizierte Person darf lesen/schreiben) und sollten verfeinert werden,
-sobald echte Benutzer-/Standort-/Rollenverwaltung eingeführt wird – die
-anonyme Session ist ein Übergangszustand, kein Ersatz für richtiges Login.
+3. Ohne diese beiden Variablen läuft die App automatisch mit dem lokalen
+   Mock-Provider (`localStorage`) weiter – keine Codeänderung nötig.
+4. **Keine Anonymous Sign-Ins aktivieren.** Diese App ist eine klinische
+   Anwendung ohne öffentliche Schreibrechte; es gibt bewusst keinen
+   anonymen Zugriff mehr (siehe „Authentifizierung & Rollen" unten). Falls
+   „Anonymous Sign-Ins" im Projekt aus einem früheren Schritt aktiviert
+   wurde, im Supabase-Dashboard unter Authentication → Sign In / Providers
+   deaktivieren – die App verwendet sie ohnehin nicht mehr, und selbst ein
+   anonym angemeldetes Konto bliebe dank `profiles.active = false`
+   ohne Lese-/Schreibzugriff.
+5. Das erste jemals registrierte Konto wird automatisch als aktiver
+   **Admin** angelegt (siehe `handle_new_auth_user()` in
+   `0002_auth_roles.sql`) – damit ist nach der Migration immer sofort ein
+   Admin-Zugang vorhanden. Jedes weitere Konto startet inaktiv
+   (`mitarbeiter`, `active = false`) und muss über die
+   Benutzerverwaltung (`/benutzer`, nur für Admins) freigeschaltet werden.
 
 ## Module
 
@@ -137,17 +143,40 @@ anonyme Session ist ein Übergangszustand, kein Ersatz für richtiges Login.
 - **Audit-Log** (`/audit`) – jede Lieferanten-, Sieb- und Fall-Aktion sowie
   jede Kontroll-Bestätigung wird lückenlos mit Datum, Uhrzeit und Benutzer
   protokolliert (append-only).
+- **Benutzerverwaltung** (`/benutzer`, nur Admins) – Konten freischalten,
+  Rollen zuweisen, Lieferanten-Konten verknüpfen. Siehe
+  „Authentifizierung & Rollen" unten.
 
-### Benutzer-Kennzeichen
+### Authentifizierung & Rollen
 
-Oben rechts in der App lässt sich ein Name/Kürzel eintragen (siehe
-`src/lib/currentUser.ts`, in `TopBar` eingebunden). Das ist **keine
-Authentifizierung** – es gibt kein Login und keine Zugriffskontrolle,
-sondern das digitale Äquivalent einer Handzeichen-Spalte auf Papier: der
-eingetragene Name wird als `performedBy` an jedem Scan, jeder
-Lieferanten-/Sieb-Änderung und jedem Fall gespeichert. Echte
-Benutzer-/Rollenverwaltung über Supabase Auth ist ein separater, künftiger
-Schritt.
+Gegen ein echtes Supabase-Projekt verlangt die App ein echtes Login
+(E-Mail/Passwort, `src/features/auth/LoginPage.tsx` +
+`src/lib/auth/AuthContext.tsx`) – kein anonymer oder öffentlicher
+Schreibzugriff. Vier Rollen: **Admin**, **OP-Leitung**, **Mitarbeiter:in**,
+**Lieferant** (`src/types/database.ts` → `UserRole`).
+
+- Neue Konten (Registrierung in der App oder direkt im Supabase-Dashboard)
+  landen inaktiv in der `profiles`-Tabelle und sehen nach der Anmeldung nur
+  einen „Wartet auf Freigabe"-Bildschirm – RLS blockiert für inaktive
+  Konten jeden Lese- und Schreibzugriff auf Spitaldaten
+  (`is_active_user()` in `0002_auth_roles.sql`).
+- Admins schalten Konten frei und weisen Rollen zu unter **Benutzerverwaltung**
+  (`/benutzer`, nur in der Navigation sichtbar für Admins;
+  `src/features/users/UserManagementPage.tsx`). Ein Lieferanten-Konto kann
+  zusätzlich einem Lieferanten-Datensatz zugeordnet werden.
+- Ein Nicht-Admin kann sich nicht selbst freischalten oder befördern – ein
+  Datenbank-Trigger (`prevent_self_role_escalation()`) blockiert das
+  serverseitig, unabhängig vom Client.
+- **Revisionssichere Zuordnung**: `performed_by` (Scans, Fälle) und
+  `audit_log.performed_by` müssen laut RLS exakt dem angemeldeten Konto
+  entsprechen (`current_display_name()`); ein Client kann keine fremde
+  Identität vortäuschen. Jede Aktion trägt damit automatisch Benutzer,
+  Datum und Uhrzeit.
+- Im lokalen Mock-Modus (ohne `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`)
+  bleibt die bisherige, nicht-authentifizierte Geräte-Kennzeichnung
+  (`src/lib/currentUser.ts`, Namensfeld oben rechts) unverändert aktiv –
+  dort gibt es weiterhin kein Login, da es sich um eine reine
+  Offline-Demo ohne Mehrbenutzerbetrieb handelt.
 
 ## Entwicklung
 

@@ -1,5 +1,5 @@
 import { TopBar } from '@/components/layout/TopBar';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import type { Supplier } from '@/types/database';
 import { useEffect, useState } from 'react';
@@ -9,6 +9,7 @@ import { SupplierForm } from './SupplierForm';
 export function EditSupplierPage() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
   const [supplier, setSupplier] = useState<Supplier | null | undefined>(undefined);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export function EditSupplierPage() {
             entityType: 'supplier',
             entityId: updated.id,
             action: 'supplier_updated',
-            performedBy: getCurrentUser(),
+            performedBy,
             details: { name: updated.name },
             createdAt: new Date().toISOString(),
           });

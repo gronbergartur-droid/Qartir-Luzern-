@@ -1,4 +1,5 @@
 import { suppliers, trayInstruments, trays } from '@/data/referenceData';
+import { getCurrentUser, setCurrentUser } from '@/lib/currentUser';
 import type {
   AuditLogEntry,
   CaseComparison,
@@ -9,8 +10,12 @@ import type {
   Tray,
   TrayInput,
   TrayInstrument,
+  UserProfile,
+  UserProfileUpdateInput,
 } from '@/types/database';
 import type { DataProvider } from './dataProvider';
+
+const LOCAL_USER_ID = 'local-device-user';
 
 const SCAN_HISTORY_KEY = 'idm-mobile.scan-history.v1';
 const AUDIT_LOG_KEY = 'idm-mobile.audit-log.v1';
@@ -304,6 +309,39 @@ export class LocalDataProvider implements DataProvider {
     this.cases = this.cases.map((c) => (c.id === caseId ? updated : c));
     writeToStorage(CASES_KEY, this.cases);
     return updated;
+  }
+
+  // ---------------------------------------------------------------------
+  // Users / roles
+  //
+  // No real auth in local/mock mode - there is exactly one synthetic,
+  // always-active admin account backed by the lightweight device identity
+  // in lib/currentUser.ts, so every screen keeps working without a login.
+  // ---------------------------------------------------------------------
+
+  async getCurrentProfile(): Promise<UserProfile | null> {
+    return this.syntheticProfile();
+  }
+
+  async listProfiles(): Promise<UserProfile[]> {
+    return [this.syntheticProfile()];
+  }
+
+  async updateProfile(_id: string, input: UserProfileUpdateInput): Promise<UserProfile> {
+    if (input.displayName !== undefined) setCurrentUser(input.displayName);
+    return this.syntheticProfile();
+  }
+
+  private syntheticProfile(): UserProfile {
+    return {
+      id: LOCAL_USER_ID,
+      email: 'lokal@idm-mobile.local',
+      displayName: getCurrentUser(),
+      role: 'admin',
+      supplierId: null,
+      active: true,
+      createdAt: new Date(0).toISOString(),
+    };
   }
 }
 

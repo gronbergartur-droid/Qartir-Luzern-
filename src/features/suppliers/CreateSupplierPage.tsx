@@ -1,11 +1,12 @@
 import { TopBar } from '@/components/layout/TopBar';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import { useNavigate } from 'react-router-dom';
 import { SupplierForm } from './SupplierForm';
 
 export function CreateSupplierPage() {
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
 
   return (
     <div>
@@ -19,7 +20,7 @@ export function CreateSupplierPage() {
             entityType: 'supplier',
             entityId: supplier.id,
             action: 'supplier_created',
-            performedBy: getCurrentUser(),
+            performedBy,
             details: { name: supplier.name, shortCode: supplier.shortCode },
             createdAt: new Date().toISOString(),
           });

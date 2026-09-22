@@ -1,5 +1,5 @@
 import { TopBar } from '@/components/layout/TopBar';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import type { Supplier, Tray, TrayInstrument } from '@/types/database';
 import { useEffect, useState } from 'react';
@@ -9,6 +9,7 @@ import { TrayForm } from './TrayForm';
 export function EditTrayPage() {
   const { trayId } = useParams<{ trayId: string }>();
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
   const [tray, setTray] = useState<Tray | null | undefined>(undefined);
   const [instruments, setInstruments] = useState<TrayInstrument[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -57,7 +58,7 @@ export function EditTrayPage() {
             entityType: 'tray',
             entityId: updated.id,
             action: 'tray_updated',
-            performedBy: getCurrentUser(),
+            performedBy,
             details: { code: updated.code, name: updated.name },
             createdAt: new Date().toISOString(),
           });
