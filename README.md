@@ -178,6 +178,19 @@ Schreibzugriff. Vier Rollen: **Admin**, **OP-Leitung**, **Mitarbeiter:in**,
   dort gibt es weiterhin kein Login, da es sich um eine reine
   Offline-Demo ohne Mehrbenutzerbetrieb handelt.
 
+**Wichtig für die Registrierungs-E-Mail**: Im Supabase-Dashboard unter
+**Authentication → URL Configuration** müssen *Site URL* und *Redirect URLs*
+auf die tatsächliche App-URL zeigen (z. B.
+`https://<owner>.github.io/<repo>/` bei GitHub Pages, plus
+`http://localhost:5173` für lokale Entwicklung gegen das echte Projekt).
+Ohne einen passenden Eintrag in *Redirect URLs* lehnt Supabase den
+Bestätigungslink-Redirect ab. Der Client nutzt zusätzlich `flowType: 'pkce'`
+(`src/lib/supabase/client.ts`), weil die App `HashRouter` verwendet
+(GitHub Pages hat kein Server-Rewrite) und der klassische „implicit"-Flow
+sein Token als `#access_token=...`-Fragment anhängt - das kollidiert mit
+dem eigenen Routing-Fragment des Routers. PKCE hängt stattdessen ein
+`?code=...`-Query-Argument an, das den Router nicht stört.
+
 ## Entwicklung
 
 ```bash

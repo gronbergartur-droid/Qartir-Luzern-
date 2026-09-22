@@ -17,5 +17,15 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
  * role-assigned account for every read and write of hospital data.
  */
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+  ? createClient(supabaseUrl as string, supabaseAnonKey as string, {
+      auth: {
+        // PKCE puts the confirmation token in a "?code=" query param instead
+        // of a "#access_token=..." URL fragment. The app uses HashRouter
+        // (see main.tsx), which also owns the URL fragment for routing -
+        // with the default "implicit" flow the two collide and the router
+        // can wipe the token before the Supabase client reads it, so an
+        // email confirmation link never signs the user in.
+        flowType: 'pkce',
+      },
+    })
   : null;
