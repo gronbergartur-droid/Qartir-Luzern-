@@ -106,15 +106,29 @@ export class SupabaseDataProvider implements DataProvider {
   }
 
   async findTrayByIdentifier(identifier: string): Promise<Tray | null> {
+    // Two safe, separately-escaped queries instead of interpolating the
+    // (OCR/user-entered) identifier into a raw PostgREST filter string -
+    // that string is a plausible injection/malformed-filter vector since it
+    // can contain commas, braces or other filter-syntax characters.
     const normalized = identifier.trim().toUpperCase();
-    const { data, error } = await this.client
+
+    const { data: byCode, error: codeError } = await this.client
       .from('trays')
       .select('*')
-      .or(`code.ilike.${normalized},aliases.cs.{${normalized}}`)
+      .ilike('code', normalized)
       .limit(1)
       .maybeSingle();
-    if (error) throw error;
-    return data ? mapTrayRow(data) : null;
+    if (codeError) throw codeError;
+    if (byCode) return mapTrayRow(byCode);
+
+    const { data: byAlias, error: aliasError } = await this.client
+      .from('trays')
+      .select('*')
+      .contains('aliases', [normalized])
+      .limit(1)
+      .maybeSingle();
+    if (aliasError) throw aliasError;
+    return byAlias ? mapTrayRow(byAlias) : null;
   }
 
   async getTrayInstruments(trayId: string): Promise<TrayInstrument[]> {

@@ -218,6 +218,11 @@ create policy "Authenticated write tray_instruments" on tray_instruments
   for insert to authenticated with check (true);
 create policy "Authenticated update tray_instruments" on tray_instruments
   for update to authenticated using (true) with check (true);
+-- Required by updateTray() in supabaseProvider.ts, which deletes a tray's
+-- existing instrument rows before re-inserting the edited list - without
+-- this policy RLS silently drops 0 rows (no error) and instruments duplicate.
+create policy "Authenticated delete tray_instruments" on tray_instruments
+  for delete to authenticated using (true);
 
 create policy "Authenticated read scans" on scans
   for select to authenticated using (true);
