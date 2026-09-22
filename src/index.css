@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-brand-50: #eef5fc;
+  --color-brand-100: #d6e7f7;
+  --color-brand-200: #b0d0ef;
+  --color-brand-300: #7fb2e4;
+  --color-brand-400: #4a90d6;
+  --color-brand-500: #2670bd;
+  --color-brand-600: #1a5697;
+  --color-brand-700: #164674;
+  --color-brand-800: #143a60;
+  --color-brand-900: #122f4e;
+
+  --color-clinical-50: #f4f8f7;
+  --color-clinical-100: #e4eeec;
+
+  --color-success-50: #eef9f2;
+  --color-success-100: #d6f0e0;
+  --color-success-500: #1e9e5a;
+  --color-success-600: #17824a;
+  --color-success-700: #14663b;
+
+  --color-warning-50: #fef8ec;
+  --color-warning-100: #fbecc7;
+  --color-warning-500: #c9861a;
+  --color-warning-600: #a66c12;
+
+  --color-danger-50: #fdf1f0;
+  --color-danger-100: #fadcda;
+  --color-danger-500: #c93a30;
+  --color-danger-600: #a92c24;
+
+  --color-ink-50: #f6f7f8;
+  --color-ink-100: #eceef0;
+  --color-ink-200: #d7dce0;
+  --color-ink-300: #b7bfc6;
+  --color-ink-400: #8c98a1;
+  --color-ink-500: #667179;
+  --color-ink-600: #4d5760;
+  --color-ink-700: #3a424a;
+  --color-ink-800: #262c31;
+  --color-ink-900: #16191c;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-900);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Comfortable tap targets for gloved/clinical use */
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen-safe {
+    min-height: -webkit-fill-available;
+  }
+}
