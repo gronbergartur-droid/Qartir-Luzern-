@@ -8,6 +8,8 @@ import type {
   Tray,
   TrayInput,
   TrayInstrument,
+  UserProfile,
+  UserProfileUpdateInput,
 } from '@/types/database';
 
 /**
@@ -56,4 +58,11 @@ export interface DataProvider {
   getCasesBySupplier(supplierId: string): Promise<LoanCase[]>;
   /** Attaches a confirmed outtake scan (already saved via saveScan) and its comparison to a case. */
   completeOuttake(caseId: string, outtakeScanId: string, comparison: CaseComparison): Promise<LoanCase>;
+
+  /** The authenticated caller's own profile (role, active status), or null if not signed in / not provisioned yet. */
+  getCurrentProfile(): Promise<UserProfile | null>;
+  /** All user accounts, for the admin-only Benutzerverwaltung screen. */
+  listProfiles(): Promise<UserProfile[]>;
+  /** Admin-only in practice (enforced by RLS): change a user's role/active/supplier assignment. */
+  updateProfile(id: string, input: UserProfileUpdateInput): Promise<UserProfile>;
 }

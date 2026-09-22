@@ -9,6 +9,8 @@ import type {
   Tray,
   TrayInput,
   TrayInstrument,
+  UserProfile,
+  UserProfileUpdateInput,
 } from '@/types/database';
 import type { DataProvider } from './dataProvider';
 
@@ -300,6 +302,38 @@ export class SupabaseDataProvider implements DataProvider {
     if (error) throw error;
     return mapCaseRow(data);
   }
+
+  // ---------------------------------------------------------------------
+  // Users / roles
+  // ---------------------------------------------------------------------
+
+  async getCurrentProfile(): Promise<UserProfile | null> {
+    const {
+      data: { user },
+    } = await this.client.auth.getUser();
+    if (!user) return null;
+    const { data, error } = await this.client.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (error) throw error;
+    return data ? mapProfileRow(data) : null;
+  }
+
+  async listProfiles(): Promise<UserProfile[]> {
+    const { data, error } = await this.client.from('profiles').select('*').order('created_at');
+    if (error) throw error;
+    return (data ?? []).map(mapProfileRow);
+  }
+
+  async updateProfile(id: string, input: UserProfileUpdateInput): Promise<UserProfile> {
+    const patch: Record<string, unknown> = {};
+    if (input.displayName !== undefined) patch.display_name = input.displayName;
+    if (input.role !== undefined) patch.role = input.role;
+    if (input.supplierId !== undefined) patch.supplier_id = input.supplierId;
+    if (input.active !== undefined) patch.active = input.active;
+
+    const { data, error } = await this.client.from('profiles').update(patch).eq('id', id).select('*').single();
+    if (error) throw error;
+    return mapProfileRow(data);
+  }
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase row shapes come from the DB, not TS */
@@ -454,6 +488,18 @@ function mapAuditToRow(entry: AuditLogEntry) {
     performed_by: entry.performedBy,
     details: entry.details,
     created_at: entry.createdAt,
+  };
+}
+
+function mapProfileRow(row: any): UserProfile {
+  return {
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
+    role: row.role,
+    supplierId: row.supplier_id,
+    active: row.active,
+    createdAt: row.created_at,
   };
 }
 

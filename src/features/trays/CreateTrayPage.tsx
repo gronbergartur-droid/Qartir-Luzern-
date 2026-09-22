@@ -1,5 +1,5 @@
 import { TopBar } from '@/components/layout/TopBar';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import type { Supplier } from '@/types/database';
 import { useEffect, useState } from 'react';
@@ -8,6 +8,7 @@ import { TrayForm } from './TrayForm';
 
 export function CreateTrayPage() {
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
   const [searchParams] = useSearchParams();
   const preselectedSupplierId = searchParams.get('supplierId') ?? undefined;
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null);
@@ -37,7 +38,7 @@ export function CreateTrayPage() {
               entityType: 'tray',
               entityId: tray.id,
               action: 'tray_created',
-              performedBy: getCurrentUser(),
+              performedBy,
               details: { code: tray.code, name: tray.name, supplierId: tray.supplierId },
               createdAt: new Date().toISOString(),
             });

@@ -2,7 +2,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import type { LoanCase, Supplier, Tray } from '@/types/database';
 import {
@@ -22,6 +22,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 export function SupplierDetailPage() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
   const [supplier, setSupplier] = useState<Supplier | null | undefined>(undefined);
   const [trays, setTrays] = useState<Tray[]>([]);
   const [cases, setCases] = useState<LoanCase[]>([]);
@@ -68,7 +69,7 @@ export function SupplierDetailPage() {
       entityType: 'supplier',
       entityId: supplierId,
       action: supplier.active ? 'supplier_deactivated' : 'supplier_activated',
-      performedBy: getCurrentUser(),
+      performedBy,
       details: { name: supplier.name },
       createdAt: new Date().toISOString(),
     });
@@ -85,7 +86,7 @@ export function SupplierDetailPage() {
         entityType: 'supplier',
         entityId: supplierId,
         action: 'supplier_deleted',
-        performedBy: getCurrentUser(),
+        performedBy,
         details: { name: supplier.name },
         createdAt: new Date().toISOString(),
       });

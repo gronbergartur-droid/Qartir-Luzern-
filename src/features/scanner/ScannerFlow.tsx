@@ -2,7 +2,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { compareCaseScans } from '@/features/cases/comparison';
 import { CaseIntakeSummaryStep } from '@/features/cases/CaseIntakeSummaryStep';
 import { CaseOuttakeSummaryStep } from '@/features/cases/CaseOuttakeSummaryStep';
-import { getCurrentUser } from '@/lib/currentUser';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import type {
   AuditLogEntry,
@@ -40,6 +40,7 @@ interface ScannerFlowProps {
 
 export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps) {
   const navigate = useNavigate();
+  const { performedBy } = useAuth();
   const [state, setState] = useState(createInitialScannerState);
   const [recognitionStage, setRecognitionStage] = useState<RecognitionStage>('barcode');
   const [allTrays, setAllTrays] = useState<Tray[]>([]);
@@ -109,10 +110,10 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
       });
 
       await dataProvider.appendAuditEntry(
-        buildAuditEntry(state.scanId, 'scan_matched', { trayCode: tray.code }),
+        buildAuditEntry(state.scanId, 'scan_matched', { trayCode: tray.code }, performedBy),
       );
     },
-    [patch, state.scanId],
+    [patch, state.scanId, performedBy],
   );
 
   const handleConfirmIdentifier = useCallback(
@@ -141,12 +142,12 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
         setAllTrays(trays);
         setAllSuppliers(suppliersList);
         await dataProvider.appendAuditEntry(
-          buildAuditEntry(state.scanId, 'scan_unmatched', { identifier }),
+          buildAuditEntry(state.scanId, 'scan_unmatched', { identifier }, performedBy),
         );
         patch({ step: 'unmatched' });
       }
     },
-    [loadTrayIntoState, mode, patch, state.scanId],
+    [loadTrayIntoState, mode, patch, state.scanId, performedBy],
   );
 
   const handleUpdateCheck = useCallback(
@@ -183,7 +184,6 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
     if (!state.tray) return;
     setSaving(true);
     try {
-      const performedBy = getCurrentUser();
       const record: ScanRecord = {
         id: state.scanId,
         trayId: state.tray.id,
@@ -206,26 +206,30 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
 
       await dataProvider.saveScan(record);
       await dataProvider.appendAuditEntry(
-        buildAuditEntry(state.scanId, 'scan_confirmed', {
-          trayCode: state.tray.code,
-          expectedCount: record.expectedCount,
-          detectedCount: record.detectedCount,
-          missing: record.missingInstrumentIds.length,
-          extra: state.extraInstruments.length,
-        }),
+        buildAuditEntry(
+          state.scanId,
+          'scan_confirmed',
+          {
+            trayCode: state.tray.code,
+            expectedCount: record.expectedCount,
+            detectedCount: record.detectedCount,
+            missing: record.missingInstrumentIds.length,
+            extra: state.extraInstruments.length,
+          },
+          performedBy,
+        ),
       );
 
       patch({ step: 'done' });
     } finally {
       setSaving(false);
     }
-  }, [patch, state]);
+  }, [patch, state, performedBy]);
 
   const handleConfirmIntakeAndOpenCase = useCallback(async () => {
     if (!state.tray) return;
     setSaving(true);
     try {
-      const performedBy = getCurrentUser();
       const record: ScanRecord = {
         id: state.scanId,
         trayId: state.tray.id,
@@ -248,11 +252,16 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
 
       await dataProvider.saveScan(record);
       await dataProvider.appendAuditEntry(
-        buildAuditEntry(state.scanId, 'scan_confirmed', {
-          trayCode: state.tray.code,
-          expectedCount: record.expectedCount,
-          detectedCount: record.detectedCount,
-        }),
+        buildAuditEntry(
+          state.scanId,
+          'scan_confirmed',
+          {
+            trayCode: state.tray.code,
+            expectedCount: record.expectedCount,
+            detectedCount: record.detectedCount,
+          },
+          performedBy,
+        ),
       );
 
       const loanCase = await dataProvider.createCase({
@@ -280,22 +289,21 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
     } finally {
       setSaving(false);
     }
-  }, [operationDate, operationNote, patch, state]);
+  }, [operationDate, operationNote, patch, state, performedBy]);
 
   const outtakeComparison = useMemo(() => {
     if (mode.kind !== 'case-outtake') return null;
     return compareCaseScans(
       { instrumentChecks: mode.intakeScan.instrumentChecks, extraInstruments: mode.intakeScan.extraInstruments },
       { instrumentChecks: state.checks, extraInstruments: state.extraInstruments },
-      getCurrentUser(),
+      performedBy,
     );
-  }, [mode, state.checks, state.extraInstruments]);
+  }, [mode, state.checks, state.extraInstruments, performedBy]);
 
   const handleConfirmOuttakeAndClose = useCallback(async () => {
     if (!state.tray || mode.kind !== 'case-outtake') return;
     setSaving(true);
     try {
-      const performedBy = getCurrentUser();
       const finalComparison = compareCaseScans(
         { instrumentChecks: mode.intakeScan.instrumentChecks, extraInstruments: mode.intakeScan.extraInstruments },
         { instrumentChecks: state.checks, extraInstruments: state.extraInstruments },
@@ -324,11 +332,16 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
 
       await dataProvider.saveScan(record);
       await dataProvider.appendAuditEntry(
-        buildAuditEntry(state.scanId, 'scan_confirmed', {
-          trayCode: state.tray.code,
-          expectedCount: record.expectedCount,
-          detectedCount: record.detectedCount,
-        }),
+        buildAuditEntry(
+          state.scanId,
+          'scan_confirmed',
+          {
+            trayCode: state.tray.code,
+            expectedCount: record.expectedCount,
+            detectedCount: record.detectedCount,
+          },
+          performedBy,
+        ),
       );
 
       await dataProvider.completeOuttake(mode.caseId, record.id, finalComparison);
@@ -350,7 +363,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
     } finally {
       setSaving(false);
     }
-  }, [mode, patch, state]);
+  }, [mode, patch, state, performedBy]);
 
   return (
     <div>
@@ -490,13 +503,18 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
   );
 }
 
-function buildAuditEntry(scanId: string, action: AuditLogEntry['action'], details: Record<string, unknown>): AuditLogEntry {
+function buildAuditEntry(
+  scanId: string,
+  action: AuditLogEntry['action'],
+  details: Record<string, unknown>,
+  performedBy: string,
+): AuditLogEntry {
   return {
     id: crypto.randomUUID(),
     entityType: 'scan',
     entityId: scanId,
     action,
-    performedBy: getCurrentUser(),
+    performedBy,
     details,
     createdAt: new Date().toISOString(),
   };

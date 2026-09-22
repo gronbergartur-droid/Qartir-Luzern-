@@ -1,7 +1,8 @@
-import { ClipboardList, LayoutGrid, ListChecks, ScanLine, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { ClipboardList, LayoutGrid, ListChecks, ScanLine, ShieldCheck, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-const items = [
+const baseItems = [
   { to: '/', label: 'Start', icon: LayoutGrid, end: true },
   { to: '/scanner', label: 'Scanner', icon: ScanLine, end: false },
   { to: '/faelle', label: 'Fälle', icon: ListChecks, end: false },
@@ -9,7 +10,12 @@ const items = [
   { to: '/audit', label: 'Audit', icon: ShieldCheck, end: false },
 ];
 
+const adminItem = { to: '/benutzer', label: 'Benutzer', icon: Users, end: false };
+
 export function BottomNav() {
+  const { profile } = useAuth();
+  const items = profile?.role === 'admin' ? [...baseItems, adminItem] : baseItems;
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]"
