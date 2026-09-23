@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
 import type { AuditAction, AuditLogEntry } from '@/types/database';
 import {
+  Archive,
   CircleCheck,
   FileSearch,
   GitCompareArrows,
@@ -36,6 +37,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof ShieldCheck
   case_outtake: { label: 'Ausgang erfasst', icon: ScanSearch, tone: 'text-brand-600 bg-brand-50' },
   case_compared: { label: 'Vergleich abgeschlossen', icon: GitCompareArrows, tone: 'text-success-600 bg-success-50' },
   case_readiness_notified: { label: 'Lieferant benachrichtigt', icon: Mail, tone: 'text-success-600 bg-success-50' },
+  archive_downloaded: { label: 'Archiv heruntergeladen', icon: Archive, tone: 'text-brand-600 bg-brand-50' },
 };
 
 export function AuditLogPage() {

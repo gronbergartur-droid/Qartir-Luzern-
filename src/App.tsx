@@ -24,6 +24,11 @@ const ScannerFlow = lazy(() =>
   import('@/features/scanner/ScannerFlow').then((m) => ({ default: m.ScannerFlow })),
 );
 
+// Pulls in exceljs + jszip (large) for the monthly archive export - split
+// into its own chunk since most sessions never visit this admin/OP-Leitung
+// screen.
+const ArchivPage = lazy(() => import('@/features/archive/ArchivPage').then((m) => ({ default: m.ArchivPage })));
+
 function App() {
   return (
     <Routes>
@@ -60,6 +65,14 @@ function App() {
         <Route path="/faelle/:caseId/hygiene-pass" element={<HygienePassPage />} />
         <Route path="/tarife" element={<PricingPage />} />
         <Route path="/benutzer" element={<UserManagementPage />} />
+        <Route
+          path="/archiv"
+          element={
+            <Suspense fallback={<ScannerLoadingFallback />}>
+              <ArchivPage />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
