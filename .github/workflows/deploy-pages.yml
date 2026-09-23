@@ -27,8 +27,9 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # GitHub Pages serves this repo at /<repo-name>/, not the domain root.
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Served from the custom domain app.idm-leih-op.ch at the root path,
+          # not the default /<repo-name>/ GitHub Pages subpath (see public/CNAME).
+          VITE_BASE_PATH: /
           # Public Supabase URL + anon (publishable) key - safe to expose
           # client-side, access is enforced by RLS (see
           # supabase/migrations/0002_auth_roles.sql), not by key secrecy.
