@@ -1,4 +1,5 @@
 import { TopBar } from '@/components/layout/TopBar';
+import { CaseIntakeDetailsStep } from '@/features/cases/CaseIntakeDetailsStep';
 import { compareCaseScans } from '@/features/cases/comparison';
 import { CaseIntakeSummaryStep } from '@/features/cases/CaseIntakeSummaryStep';
 import { CaseOuttakeSummaryStep } from '@/features/cases/CaseOuttakeSummaryStep';
@@ -71,6 +72,9 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
   // false so the live camera actually shows instead of a blank screen -
   // there's no pre-supplied photo to fall back to.
   const [skipCaptureUi, setSkipCaptureUi] = useState(Boolean(initialImageDataUrls?.length));
+  // Case-intake collects Operateur/OP-Datum as its own first screen, before
+  // the camera even opens - every other mode skips straight to capture.
+  const [caseDetailsConfirmed, setCaseDetailsConfirmed] = useState(mode.kind !== 'case-intake');
 
   const patch = useCallback((p: Partial<typeof state>) => setState((prev) => ({ ...prev, ...p })), []);
 
@@ -418,6 +422,24 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
     }
   }, [mode, patch, state, performedBy]);
 
+  if (mode.kind === 'case-intake' && !caseDetailsConfirmed) {
+    return (
+      <div>
+        <TopBar title="Fall-Angaben" subtitle={MODE_SUBTITLE[mode.kind]} showBack onBack={() => navigate(-1)} />
+        <CaseIntakeDetailsStep
+          operationNote={operationNote}
+          onOperationNoteChange={setOperationNote}
+          operationDate={operationDate}
+          onOperationDateChange={setOperationDate}
+          physicians={physicians}
+          operateurId={operateurId}
+          onOperateurIdChange={setOperateurId}
+          onContinue={() => setCaseDetailsConfirmed(true)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <TopBar
@@ -516,12 +538,8 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
           checks={state.checks}
           extras={state.extraInstruments}
           operationNote={operationNote}
-          onOperationNoteChange={setOperationNote}
           operationDate={operationDate}
-          onOperationDateChange={setOperationDate}
-          physicians={physicians}
-          operateurId={operateurId}
-          onOperateurIdChange={setOperateurId}
+          operateur={physicians.find((p) => p.id === operateurId) ?? null}
           onConfirmAndOpenCase={handleConfirmIntakeAndOpenCase}
           saving={saving}
         />
