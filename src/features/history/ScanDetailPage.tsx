@@ -1,8 +1,10 @@
 import { TopBar } from '@/components/layout/TopBar';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { formatGs1Date } from '@/features/scanner/recognition/gs1';
 import { dataProvider } from '@/services';
 import type { ScanRecord, Supplier, Tray } from '@/types/database';
+import { Tag } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -69,6 +71,44 @@ export function ScanDetailPage() {
               />
             ))}
           </div>
+        )}
+
+        {scan.recognition?.gs1 && (
+          <Card className="mb-4 p-3.5 text-xs text-ink-600">
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+              <Tag size={13} /> GS1/UDI-Daten
+            </p>
+            <div className="space-y-1">
+              {scan.recognition.gs1.ref && (
+                <p>
+                  Artikelnummer (REF): <span className="font-mono font-medium text-ink-800">{scan.recognition.gs1.ref}</span>
+                </p>
+              )}
+              {scan.recognition.gs1.gtin && (
+                <p>
+                  GTIN: <span className="font-mono font-medium text-ink-800">{scan.recognition.gs1.gtin}</span>
+                </p>
+              )}
+              {scan.recognition.gs1.lot && (
+                <p>
+                  Charge (LOT): <span className="font-mono font-medium text-ink-800">{scan.recognition.gs1.lot}</span>
+                </p>
+              )}
+              {scan.recognition.gs1.serial && (
+                <p>
+                  Seriennummer: <span className="font-mono font-medium text-ink-800">{scan.recognition.gs1.serial}</span>
+                </p>
+              )}
+              {scan.recognition.gs1.expiryDate && (
+                <p>
+                  Verfallsdatum:{' '}
+                  <span className="font-mono font-medium text-ink-800">
+                    {formatGs1Date(scan.recognition.gs1.expiryDate) ?? scan.recognition.gs1.expiryDate}
+                  </span>
+                </p>
+              )}
+            </div>
+          </Card>
         )}
 
         <Card className="p-4">

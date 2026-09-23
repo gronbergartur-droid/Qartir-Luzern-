@@ -78,11 +78,21 @@ export interface RecognitionResult {
   candidateIdentifiers: RecognitionCandidate[];
   ocrConfidence: number | null;
   processingTimeMs: number;
+  /** GS1/UDI fields (GTIN, manufacturer REF, lot, serial, expiry) parsed from the label, if present - see recognition/gs1.ts. */
+  gs1: Gs1Fields | null;
+}
+
+export interface Gs1Fields {
+  gtin?: string;
+  ref?: string;
+  lot?: string;
+  serial?: string;
+  expiryDate?: string;
 }
 
 export interface RecognitionCandidate {
   value: string;
-  source: 'barcode' | 'qr' | 'ocr';
+  source: 'barcode' | 'qr' | 'ocr' | 'gs1';
   confidence: number;
 }
 

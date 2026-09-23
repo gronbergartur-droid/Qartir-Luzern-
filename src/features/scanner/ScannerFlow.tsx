@@ -102,6 +102,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
             candidateIdentifiers: [],
             ocrConfidence: null,
             processingTimeMs: 0,
+            gs1: null,
           },
           step: 'identify',
         });
