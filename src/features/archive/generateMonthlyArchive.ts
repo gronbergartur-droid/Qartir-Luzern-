@@ -134,11 +134,18 @@ export async function buildMonthlyArchive(
     const folder = bucket === 'eingang' ? 'Eingang' : bucket === 'ausgang' ? 'Ausgang' : 'Kontrolle';
     for (const scan of list) {
       if (!scan.capturedImageDataUrl) continue;
-      const blob = await dataUrlToBlob(scan.capturedImageDataUrl);
-      if (!blob) continue;
       const tray = scan.trayId ? trayById.get(scan.trayId) : undefined;
-      const filename = `${safeFilePart(tray?.code ?? scan.matchedIdentifier ?? scan.id)}_${safeFilePart(scan.createdAt)}${extensionFor(blob.type)}`;
-      zip.file(`06_Fotos/${folder}/${filename}`, blob);
+      const baseName = `${safeFilePart(tray?.code ?? scan.matchedIdentifier ?? scan.id)}_${safeFilePart(scan.createdAt)}`;
+
+      const blob = await dataUrlToBlob(scan.capturedImageDataUrl);
+      if (blob) zip.file(`06_Fotos/${folder}/${baseName}${extensionFor(blob.type)}`, blob);
+
+      for (const [index, additionalUrl] of scan.additionalImageDataUrls.entries()) {
+        const additionalBlob = await dataUrlToBlob(additionalUrl);
+        if (additionalBlob) {
+          zip.file(`06_Fotos/${folder}/${baseName}_${index + 2}${extensionFor(additionalBlob.type)}`, additionalBlob);
+        }
+      }
     }
   }
 

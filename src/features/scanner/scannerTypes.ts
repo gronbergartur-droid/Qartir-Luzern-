@@ -34,6 +34,8 @@ export interface ScannerState {
   scanId: string;
   step: ScannerStep;
   imageDataUrl: string | null;
+  /** Extra photos beyond the primary one (e.g. a barcode/detail close-up of the same Sieb). */
+  additionalImageDataUrls: string[];
   recognition: RecognitionResult | null;
   selectedIdentifier: string | null;
   tray: Tray | null;
@@ -75,6 +77,7 @@ export function createInitialScannerState(): ScannerState {
     scanId: crypto.randomUUID(),
     step: 'capture',
     imageDataUrl: null,
+    additionalImageDataUrls: [],
     recognition: null,
     selectedIdentifier: null,
     tray: null,

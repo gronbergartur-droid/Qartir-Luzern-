@@ -440,6 +440,7 @@ function mapScanRow(row: any): ScanRecord {
     supplierId: row.supplier_id,
     caseId: row.case_id,
     capturedImageDataUrl: row.captured_image_url,
+    additionalImageDataUrls: row.additional_image_urls ?? [],
     recognition: row.recognition,
     matchedIdentifier: row.matched_identifier,
     status: row.status,
@@ -464,6 +465,7 @@ function mapScanToRow(scan: ScanRecord) {
     // Large captured images belong in Supabase Storage in production; this
     // column is a placeholder for a storage object path/URL, not a base64 blob.
     captured_image_url: scan.capturedImageDataUrl,
+    additional_image_urls: scan.additionalImageDataUrls,
     recognition: scan.recognition,
     matched_identifier: scan.matchedIdentifier,
     status: scan.status,

@@ -112,6 +112,8 @@ export interface ScanRecord {
   /** Set when this scan is the intake or outtake scan of a LoanCase, null for a standalone check. */
   caseId: UUID | null;
   capturedImageDataUrl: string | null;
+  /** Extra photos beyond the primary one (e.g. a barcode/detail close-up) - same scan, same Sieb. */
+  additionalImageDataUrls: string[];
   recognition: RecognitionResult | null;
   matchedIdentifier: string | null;
   status: ScanStatus;
