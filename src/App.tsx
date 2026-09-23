@@ -7,6 +7,8 @@ import { HygienePassPage } from '@/features/cases/HygienePassPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ScanDetailPage } from '@/features/history/ScanDetailPage';
 import { HistoryPage } from '@/features/history/HistoryPage';
+import { CreatePhysicianPage } from '@/features/physicians/CreatePhysicianPage';
+import { PhysiciansPage } from '@/features/physicians/PhysiciansPage';
 import { PricingPage } from '@/features/pricing/PricingPage';
 import { CreateSupplierPage } from '@/features/suppliers/CreateSupplierPage';
 import { EditSupplierPage } from '@/features/suppliers/EditSupplierPage';
@@ -63,6 +65,8 @@ function App() {
         <Route path="/lieferanten/:supplierId/bearbeiten" element={<EditSupplierPage />} />
         <Route path="/sieb/neu" element={<CreateTrayPage />} />
         <Route path="/sieb/:trayId/bearbeiten" element={<EditTrayPage />} />
+        <Route path="/aerzte" element={<PhysiciansPage />} />
+        <Route path="/aerzte/neu" element={<CreatePhysicianPage />} />
         <Route path="/faelle" element={<CasesPage />} />
         <Route
           path="/faelle/eingang"

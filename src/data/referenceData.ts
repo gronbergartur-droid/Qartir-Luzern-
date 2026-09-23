@@ -1,4 +1,4 @@
-import type { Supplier, Tray, TrayInstrument } from '@/types/database';
+import type { Physician, Supplier, Tray, TrayInstrument } from '@/types/database';
 
 /**
  * Seed reference data for local/demo mode. In production this is replaced by
@@ -289,4 +289,27 @@ export const trayInstruments: TrayInstrument[] = [
   { id: 'ti-22', trayId: 'tray-ssw-leih-11-03', name: 'Mini-Schraubenzieher', quantity: 1, position: 2, critical: true, referenceImageUrl: null },
   { id: 'ti-23', trayId: 'tray-ssw-leih-11-03', name: 'Bohrer 1.5 mm', quantity: 2, position: 3, critical: false, referenceImageUrl: null },
   { id: 'ti-24', trayId: 'tray-ssw-leih-11-03', name: 'Bohrer 2.0 mm', quantity: 2, position: 4, critical: false, referenceImageUrl: null },
+];
+
+// Belegärzte/Operateure, aus der Telefonliste Belegärzte/Operateure (Spital
+// Schwyz, Bereich Anästhesie) übertragen - vorerst nur Orthopädie und
+// Gynäkologie, wie angefragt. Praxis-Telefonnummern wurden nur dort
+// übernommen, wo die Zuordnung im Foto eindeutig war; bei Unsicherheit bitte
+// über die Ärzteliste-Seite korrigieren.
+export const physicians: Physician[] = [
+  { id: 'phys-orler', name: 'Dr. René Orler', department: 'Orthopädie', mobilePhone: '079 393 86 88', practicePhone: '041 818 68 68', email: 'rene.orler@tellklinik.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-joeckel', name: 'Dr. Jens Jöckel', department: 'Orthopädie', mobilePhone: '076 449 99 75', practicePhone: null, email: 'jens.joeckel@tellklinik.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-graf', name: 'Dr. Urs Graf', department: 'Orthopädie', mobilePhone: '079 400 63 52', practicePhone: '041 818 68 68', email: 'dr.u.graf@graf-chirurgie.com', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-waisbrod', name: 'Dr. Guy Waisbrod', department: 'Orthopädie', mobilePhone: '076 802 88 08', practicePhone: null, email: 'guy.waisbrod@tellklinik.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-burmeister', name: 'Dr. Helge Burmeister', department: 'Orthopädie', mobilePhone: '076 525 86 26', practicePhone: '041 820 36 36', email: 'burmeister-orthopaedie@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-seidner', name: 'Dr. Seidner', department: 'Orthopädie', mobilePhone: '079 911 11 55 (Tag) / 076 476 11 00 (Nacht)', practicePhone: '041 811 11 55', email: 'kontakt@ortho-praxis-schwyz.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-staehelin', name: 'Dr. Thomas Stähelin', department: 'Orthopädie', mobilePhone: '079 282 60 90', practicePhone: '041 610 33 33', email: 'sekretariat@stahelin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-flueckiger', name: 'Dr. Roman Flückiger', department: 'Orthopädie', mobilePhone: '079 706 20 53', practicePhone: '041 784 02 22', email: 'roman.flueckiger@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-solinger', name: 'Dr. Theo Solinger', department: 'Orthopädie', mobilePhone: '076 393 71 25', practicePhone: '041 784 02 22', email: 'theo.solinger@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-roethlisberger', name: 'Dr. Martin Röthlisberger', department: 'Orthopädie', mobilePhone: '076 572 74 12', practicePhone: '041 784 02 22', email: 'martin.roethlisberger@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-gathmann', name: 'Dr. Sebastian Gathmann', department: 'Orthopädie', mobilePhone: '078 896 56 00', practicePhone: '041 784 02 22', email: 'sebastian.gathmann@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-bohnert', name: 'Dr. Laurent Bohnert', department: 'Orthopädie', mobilePhone: '079 608 67 98', practicePhone: '041 784 02 22', email: 'laurent.bohnert@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-baggenstos', name: 'Dr. Simon Baggenstos', department: 'Gynäkologie', mobilePhone: '079 618 05 98', practicePhone: '041 811 81 00', email: 'simon.baggenstos@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-weber', name: 'Dr. Regula Weber', department: 'Gynäkologie', mobilePhone: '079 709 80 88', practicePhone: '041 811 01 01/08', email: 'regula.weber@hin.ch', createdAt: '2026-09-23T00:00:00.000Z' },
+  { id: 'phys-tschiderer', name: 'Dr. Tschiderer-Sadeg Wedad', department: 'Gynäkologie', mobilePhone: '076 225 18 77', practicePhone: '041 870 44 44', email: 'info@gynsadeq.ch', createdAt: '2026-09-23T00:00:00.000Z' },
 ];

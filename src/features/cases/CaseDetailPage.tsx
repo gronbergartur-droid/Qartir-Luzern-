@@ -3,8 +3,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
-import type { LoanCase, ScanRecord, Supplier, Tray } from '@/types/database';
-import { ArrowRight, Calendar, Camera, Mail, ScanLine, Truck } from 'lucide-react';
+import type { LoanCase, Physician, ScanRecord, Supplier, Tray } from '@/types/database';
+import { ArrowRight, Calendar, Camera, Mail, ScanLine, Stethoscope, Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ComparisonResultView } from './ComparisonResultView';
@@ -14,6 +14,7 @@ export function CaseDetailPage() {
   const [loanCase, setLoanCase] = useState<LoanCase | null | undefined>(undefined);
   const [tray, setTray] = useState<Tray | null>(null);
   const [supplier, setSupplier] = useState<Supplier | null>(null);
+  const [operateur, setOperateur] = useState<Physician | null>(null);
   const [intakeScan, setIntakeScan] = useState<ScanRecord | null>(null);
   const [outtakeScan, setOuttakeScan] = useState<ScanRecord | null>(null);
 
@@ -28,6 +29,10 @@ export function CaseDetailPage() {
       setIntakeScan(intake);
       if (foundTray) setSupplier(await dataProvider.getSupplier(foundTray.supplierId));
       if (found.outtakeScanId) setOuttakeScan(await dataProvider.getScan(found.outtakeScanId));
+      if (found.operateurId) {
+        const physicians = await dataProvider.getPhysicians();
+        setOperateur(physicians.find((p) => p.id === found.operateurId) ?? null);
+      }
     });
   }, [caseId]);
 
@@ -74,6 +79,13 @@ export function CaseDetailPage() {
               <Calendar size={13} className="shrink-0 text-ink-400" />
               {loanCase.operationNote}
               {loanCase.operationDate && ` · ${loanCase.operationDate}`}
+            </p>
+          )}
+
+          {operateur && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-600">
+              <Stethoscope size={13} className="shrink-0 text-ink-400" />
+              {operateur.name}
             </p>
           )}
         </Card>

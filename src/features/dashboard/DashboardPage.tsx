@@ -9,6 +9,7 @@ import {
   ScanLine,
   ShieldCheck,
   Sparkles,
+  Stethoscope,
   Truck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -38,6 +39,12 @@ const modules = [
     icon: GitCompareArrows,
     title: 'Vorher/Nachher-Vergleich',
     description: 'Eingang, Ausgang & Abweichungen',
+  },
+  {
+    to: '/aerzte',
+    icon: Stethoscope,
+    title: 'Ärzteliste',
+    description: 'Belegärzte/Operateure nach Fachbereich',
   },
 ];
 

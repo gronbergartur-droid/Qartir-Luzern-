@@ -108,3 +108,8 @@ from (
     ('SSW-LEIH-11-03', 'Bohrer 2.0 mm', 2, 4, false)
 ) as v(tray_code, name, quantity, position, critical)
 join new_trays t on t.code = v.tray_code;
+
+insert into physicians (name, department, mobile_phone, practice_phone, email)
+values
+  ('Dr. Martin Röthlisberger', 'Orthopädie', '076 572 74 12', '041 784 02 22', 'martin.roethlisberger@hin.ch'),
+  ('Dr. Simon Baggenstos', 'Gynäkologie', '079 618 05 98', '041 811 81 00', 'simon.baggenstos@hin.ch');

@@ -8,6 +8,7 @@ import type {
   AuditLogEntry,
   ExtraInstrumentEntry,
   InstrumentCheckEntry,
+  Physician,
   ScanRecord,
   Supplier,
   Tray,
@@ -61,6 +62,8 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
   const [mismatchWarning, setMismatchWarning] = useState<string | null>(null);
   const [operationNote, setOperationNote] = useState('');
   const [operationDate, setOperationDate] = useState('');
+  const [operateurId, setOperateurId] = useState<string | null>(null);
+  const [physicians, setPhysicians] = useState<Physician[]>([]);
   const [openedCaseId, setOpenedCaseId] = useState<string | null>(null);
   // Suppresses the capture-step UI only for the auto-fed photo(s) from
   // SetScannerFlow's initialImageDataUrls. If the user then retakes (via
@@ -120,6 +123,15 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
   useEffect(() => {
     if (initialImageDataUrls?.length) {
       runIdentification(initialImageDataUrls);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Only the case-intake summary offers an Operateur picker, so only that
+  // mode needs the physicians list.
+  useEffect(() => {
+    if (mode.kind === 'case-intake') {
+      dataProvider.getPhysicians().then(setPhysicians);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -309,6 +321,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
         intakeScanId: record.id,
         operationNote: operationNote.trim() || null,
         operationDate: operationDate || null,
+        operateurId,
         performedBy,
       });
 
@@ -328,7 +341,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
     } finally {
       setSaving(false);
     }
-  }, [operationDate, operationNote, patch, state, performedBy]);
+  }, [operationDate, operationNote, operateurId, patch, state, performedBy]);
 
   const outtakeComparison = useMemo(() => {
     if (mode.kind !== 'case-outtake') return null;
@@ -506,6 +519,9 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
           onOperationNoteChange={setOperationNote}
           operationDate={operationDate}
           onOperationDateChange={setOperationDate}
+          physicians={physicians}
+          operateurId={operateurId}
+          onOperateurIdChange={setOperateurId}
           onConfirmAndOpenCase={handleConfirmIntakeAndOpenCase}
           saving={saving}
         />

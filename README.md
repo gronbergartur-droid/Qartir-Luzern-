@@ -151,7 +151,15 @@ ein echtes Supabase-Projekt angepasst werden muss.
   dem Eingang verglichen (fehlende/zusätzliche Instrumente, Mengenabweichungen,
   Verwechslungs-Vorschläge – siehe „KI-Vergleich“ oben). Jeder erkannte Code
   wird beim Ausgang gegen das erwartete Sieb geprüft; bei Abweichung erscheint
-  ein Warnhinweis, ohne den Ablauf zu blockieren.
+  ein Warnhinweis, ohne den Ablauf zu blockieren. Beim Eingang kann optional
+  der **Operateur** (Belegarzt) aus der Ärzteliste zugeordnet werden – das
+  entspricht der Spalte auf dem intern geführten Whiteboard (OP-Datum /
+  Leih-Set / Operateur / Retour); Retour selbst ist bereits über den
+  Fall-Status und die Lieferanten-Benachrichtigung abgebildet.
+- **Ärzteliste** (`/aerzte`) – Belegärzte/Operateure nach Fachbereich, aus
+  der internen Telefonliste übertragen (aktuell Orthopädie und Gynäkologie).
+  Wird beim Sieb-Fall-Eingang als Operateur-Auswahl verwendet; weitere
+  Ärzte/Fachbereiche können über „+“ ergänzt werden.
 - **Sieb-Bereitschaft nach Sterilisation** (auf der Fall-Detailseite, sobald
   der Ausgang erfasst ist) – der Hygiene-Pass der aktuellen
   Sterilisationscharge (Chargen-Ausdruck, bei jedem Zyklus anders) wird
