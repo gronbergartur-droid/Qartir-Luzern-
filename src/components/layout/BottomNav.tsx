@@ -1,5 +1,5 @@
 import { useAuth } from '@/lib/auth/AuthContext';
-import { ClipboardList, LayoutGrid, ListChecks, ScanLine, ShieldCheck, Users } from 'lucide-react';
+import { Archive, ClipboardList, LayoutGrid, ListChecks, ScanLine, ShieldCheck, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const baseItems = [
@@ -11,10 +11,15 @@ const baseItems = [
 ];
 
 const adminItem = { to: '/benutzer', label: 'Benutzer', icon: Users, end: false };
+const archiveItem = { to: '/archiv', label: 'Archiv', icon: Archive, end: false };
 
 export function BottomNav() {
   const { profile } = useAuth();
-  const items = profile?.role === 'admin' ? [...baseItems, adminItem] : baseItems;
+  const items = [
+    ...baseItems,
+    ...(profile?.role === 'admin' || profile?.role === 'op_leitung' ? [archiveItem] : []),
+    ...(profile?.role === 'admin' ? [adminItem] : []),
+  ];
 
   return (
     <nav

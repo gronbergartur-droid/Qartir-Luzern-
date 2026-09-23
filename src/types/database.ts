@@ -143,11 +143,12 @@ export type AuditAction =
   | 'case_intake'
   | 'case_outtake'
   | 'case_compared'
-  | 'case_readiness_notified';
+  | 'case_readiness_notified'
+  | 'archive_downloaded';
 
 export interface AuditLogEntry {
   id: UUID;
-  entityType: 'scan' | 'tray' | 'supplier' | 'case';
+  entityType: 'scan' | 'tray' | 'supplier' | 'case' | 'archive';
   entityId: UUID;
   action: AuditAction;
   performedBy: string;

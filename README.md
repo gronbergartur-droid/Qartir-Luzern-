@@ -154,6 +154,13 @@ ein echtes Supabase-Projekt angepasst werden muss.
 - **Benutzerverwaltung** (`/benutzer`, nur Admins) – Konten freischalten,
   Rollen zuweisen, Lieferanten-Konten verknüpfen. Siehe
   „Authentifizierung & Rollen" unten.
+- **Archiv** (`/archiv`, Admins und OP-Leitung) – lädt pro Monat ein
+  ZIP mit Lieferanten, Sieb-Referenzen, Sieb-Fällen, Scans (Eingang/
+  Ausgang/Kontrolle), Hygiene-Pass-Fotos und Audit-Log als zweite,
+  lokale Kopie herunter – für die in der Schweiz üblichen 10 Jahre
+  Aufbewahrungspflicht. Die Daten in Supabase bleiben davon unberührt
+  (keine Löschung); siehe `src/features/archive/generateMonthlyArchive.ts`
+  für den genauen ZIP-Aufbau.
 
 ### Authentifizierung & Rollen
 
