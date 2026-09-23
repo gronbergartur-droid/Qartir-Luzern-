@@ -2,8 +2,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { RecognitionCandidate, RecognitionResult } from '@/types/database';
-import { AlertCircle, Barcode, QrCode, ScanText } from 'lucide-react';
+import { AlertCircle, Barcode, QrCode, ScanText, Tag } from 'lucide-react';
 import { useState } from 'react';
+import { formatGs1Date } from '../recognition/gs1';
 
 interface IdentifyStepProps {
   imageDataUrl: string | null;
@@ -17,6 +18,7 @@ const sourceMeta: Record<RecognitionCandidate['source'], { label: string; icon: 
   barcode: { label: 'Barcode', icon: Barcode },
   qr: { label: 'QR-Code', icon: QrCode },
   ocr: { label: 'Texterkennung', icon: ScanText },
+  gs1: { label: 'GS1/UDI-Code', icon: Tag },
 };
 
 export function IdentifyStep({
@@ -59,6 +61,44 @@ export function IdentifyStep({
             />
           ))}
         </div>
+      )}
+
+      {recognition.gs1 && (
+        <Card className="mb-4 p-3.5 text-xs text-ink-600">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+            <Tag size={13} /> GS1/UDI-Daten erkannt
+          </p>
+          <div className="space-y-1">
+            {recognition.gs1.ref && (
+              <p>
+                Artikelnummer (REF): <span className="font-mono font-medium text-ink-800">{recognition.gs1.ref}</span>
+              </p>
+            )}
+            {recognition.gs1.gtin && (
+              <p>
+                GTIN: <span className="font-mono font-medium text-ink-800">{recognition.gs1.gtin}</span>
+              </p>
+            )}
+            {recognition.gs1.lot && (
+              <p>
+                Charge (LOT): <span className="font-mono font-medium text-ink-800">{recognition.gs1.lot}</span>
+              </p>
+            )}
+            {recognition.gs1.serial && (
+              <p>
+                Seriennummer: <span className="font-mono font-medium text-ink-800">{recognition.gs1.serial}</span>
+              </p>
+            )}
+            {recognition.gs1.expiryDate && (
+              <p>
+                Verfallsdatum:{' '}
+                <span className="font-mono font-medium text-ink-800">
+                  {formatGs1Date(recognition.gs1.expiryDate) ?? recognition.gs1.expiryDate}
+                </span>
+              </p>
+            )}
+          </div>
+        </Card>
       )}
 
       {candidateIdentifiers.length > 0 && (

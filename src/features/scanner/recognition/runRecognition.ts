@@ -1,5 +1,6 @@
 import type { RecognitionResult } from '@/types/database';
 import { readBarcodesFromImage } from './barcodeReader';
+import { hasGs1Fields, parseGs1ApplicationIdentifiers } from './gs1';
 import { dedupeCandidates, extractIdentifierCandidates } from './identifierPatterns';
 import { readTextFromImage } from './ocrReader';
 
@@ -56,10 +57,18 @@ export async function runRecognition(
     .join('\n');
   const ocrConfidence = ocrResults.reduce((max, r) => Math.max(max, r.confidence), 0);
 
+  // GS1/UDI labels (KARL STORZ and most other EU medical-device makers) print
+  // their Application Identifiers as human-readable "(01)...(10)...(17)..."
+  // text next to the barcode, which OCR (and occasionally the raw barcode
+  // payload itself) picks up - parsed once over everything captured so far.
+  const gs1 = parseGs1ApplicationIdentifiers([ocrText, ...barcodeValues, ...qrValues].join('\n'));
+
   const candidates = dedupeCandidates([
     ...qrValues.flatMap((v) => extractIdentifierCandidates(v, 'qr', 0.98)),
     ...barcodeValues.flatMap((v) => extractIdentifierCandidates(v, 'barcode', 0.95)),
     ...ocrResults.flatMap((r) => extractIdentifierCandidates(r.text, 'ocr', Math.max(r.confidence / 100, 0.3))),
+    ...(gs1.ref ? [{ value: gs1.ref, source: 'gs1' as const, confidence: 0.9 }] : []),
+    ...(gs1.gtin ? [{ value: gs1.gtin, source: 'gs1' as const, confidence: 0.75 }] : []),
   ]);
 
   onStage?.('done');
@@ -71,6 +80,7 @@ export async function runRecognition(
     candidateIdentifiers: candidates,
     ocrConfidence: ocrConfidence || null,
     processingTimeMs: Math.round(performance.now() - started),
+    gs1: hasGs1Fields(gs1) ? gs1 : null,
   };
 }
 

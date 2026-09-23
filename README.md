@@ -125,7 +125,13 @@ ein echtes Supabase-Projekt angepasst werden muss.
   Instrumenten-Kontrolle. Läuft als eigenständige Kontrolle (`/scanner`)
   oder als Eingangs-/Ausgangs-Scan eines Sieb-Falls. Auf dem Aufnahme-Schritt
   kann statt der Live-Kamera auch ein Foto aus der Fotobibliothek des
-  Telefons gewählt werden.
+  Telefons gewählt werden. Erkennt zusätzlich GS1/UDI-Etiketten (Pflicht-
+  Kennzeichnung praktisch aller EU-Medizinprodukte-Hersteller, u. a. KARL
+  STORZ): Artikelnummer (REF), GTIN, Charge und Verfallsdatum werden aus dem
+  „(01)…(10)…(17)…"-Format extrahiert (siehe `recognition/gs1.ts`) und als
+  zusätzlicher Erkennungs-Kandidat sowie Info-Karte angezeigt – ein Treffer
+  setzt voraus, dass die REF/GTIN als Alias beim jeweiligen Sieb hinterlegt
+  ist (Lieferantenverwaltung → Sieb bearbeiten).
 - **Sieb-SET erfassen** (`/scanner/set`) – für eine Lieferung mit mehreren
   Leihsieben: 2 bis 10 Siebe erfassen, pro Sieb 1 bis 3 Fotos (Kamera oder
   Fotobibliothek – Übersicht Pflicht, Detail-/Barcode-Nahaufnahmen optional).
