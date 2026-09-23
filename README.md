@@ -217,9 +217,9 @@ Schreibzugriff. Vier Rollen: **Admin**, **OP-Leitung**, **Mitarbeiter:in**,
 
 **Wichtig für die Registrierungs-E-Mail**: Im Supabase-Dashboard unter
 **Authentication → URL Configuration** müssen *Site URL* und *Redirect URLs*
-auf die tatsächliche App-URL zeigen (z. B.
-`https://<owner>.github.io/<repo>/` bei GitHub Pages, plus
-`http://localhost:5173` für lokale Entwicklung gegen das echte Projekt).
+auf die tatsächliche App-URL zeigen (aktuell `https://app.idm-leih-op.ch/`,
+siehe „Eigene Domain" unten, plus `http://localhost:5173` für lokale
+Entwicklung gegen das echte Projekt).
 Ohne einen passenden Eintrag in *Redirect URLs* lehnt Supabase den
 Bestätigungslink-Redirect ab. Der Client nutzt zusätzlich `flowType: 'pkce'`
 (`src/lib/supabase/client.ts`), weil die App `HashRouter` verwendet
@@ -257,11 +257,33 @@ Einmalig einzurichten:
    Geheimhaltung dieses Keys. Ohne diese beiden Variablen baut die
    Seite im lokalen Mock-Modus.
 3. Danach läuft jeder Push auf `main` automatisch durch Build + Deploy;
-   die URL lautet `https://<owner>.github.io/<repo>/`.
+   die Standard-URL lautet `https://<owner>.github.io/<repo>/`.
 
 Der Login-/Registrierungs-/Freischaltungs-Ablauf wurde live im echten Browser
 gegen die produktive Seite verifiziert (Registrierung, Bestätigungs-E-Mail,
 Login, Admin-Freischaltung unter `/benutzer`).
+
+### Eigene Domain
+
+Die App läuft unter der eigenen Domain **`https://app.idm-leih-op.ch`**
+(Infomaniak) statt der GitHub-Standard-URL:
+
+- `public/CNAME` enthält `app.idm-leih-op.ch` – GitHub Pages liest diese
+  Datei aus dem veröffentlichten Build und setzt/aktualisiert die
+  Custom-Domain-Einstellung automatisch bei jedem Deploy.
+- `VITE_BASE_PATH` im Workflow ist auf `/` gesetzt (statt
+  `/<repo-name>/`), da die eigene Domain die App direkt an der Wurzel
+  ausliefert.
+- Bei Infomaniak (Zone DNS des Domains) liegt eine CNAME-Eintrag
+  `app` → `<owner>.github.io.`.
+- Einmalig zu prüfen: **Settings → Pages** im Repository sollte die
+  Custom Domain `app.idm-leih-op.ch` zeigen (füllt sich nach dem ersten
+  Deploy mit der `CNAME`-Datei automatisch) und **„Enforce HTTPS"**
+  aktiviert sein, sobald GitHub das TLS-Zertifikat ausgestellt hat
+  (kann nach DNS-Umstellung einige Minuten bis Stunden dauern).
+- Supabase **Authentication → URL Configuration** (Site URL,
+  Redirect URLs) muss auf `https://app.idm-leih-op.ch/` zeigen, sonst
+  schlägt der Bestätigungs-Link-Redirect fehl (siehe oben).
 
 Für Deployments ausserhalb von GitHub Pages: `vite.config.ts` liest den
 Basis-Pfad aus `VITE_BASE_PATH` (Default `/`) – für einen Server, der die
