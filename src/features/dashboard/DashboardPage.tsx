@@ -4,6 +4,7 @@ import {
   CircleAlert,
   ClipboardList,
   GitCompareArrows,
+  Layers,
   PackageOpen,
   ScanLine,
   ShieldCheck,
@@ -85,6 +86,18 @@ export function DashboardPage() {
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-white">
             Kontrolle starten →
           </span>
+        </Card>
+      </Link>
+
+      <Link to="/scanner/set" className="mt-3 block">
+        <Card className="flex items-center gap-3 p-3.5 active:bg-ink-50">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+            <Layers size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink-900">Sieb-SET erfassen</p>
+            <p className="text-xs text-ink-500">Lieferung mit mehreren Leihsieben - 2 bis 10 Fotos nacheinander</p>
+          </div>
         </Card>
       </Link>
 

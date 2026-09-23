@@ -24,6 +24,10 @@ const ScannerFlow = lazy(() =>
   import('@/features/scanner/ScannerFlow').then((m) => ({ default: m.ScannerFlow })),
 );
 
+const SetScannerFlow = lazy(() =>
+  import('@/features/scanner/SetScannerFlow').then((m) => ({ default: m.SetScannerFlow })),
+);
+
 // Pulls in exceljs + jszip (large) for the monthly archive export - split
 // into its own chunk since most sessions never visit this admin/OP-Leitung
 // screen.
@@ -39,6 +43,14 @@ function App() {
           element={
             <Suspense fallback={<ScannerLoadingFallback />}>
               <ScannerFlow />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/scanner/set"
+          element={
+            <Suspense fallback={<ScannerLoadingFallback />}>
+              <SetScannerFlow />
             </Suspense>
           }
         />
