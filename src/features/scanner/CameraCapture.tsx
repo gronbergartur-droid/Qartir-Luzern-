@@ -114,7 +114,12 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        // No "capture" attribute here on purpose: with it set, mobile
+        // browsers skip the native chooser and jump straight back into the
+        // camera, making the phone's photo library unreachable from this
+        // button. Leaving it off lets the OS offer "Photo Library" /
+        // "Camera" / "Browse" - see the live camera preview above for the
+        // dedicated quick-capture path.
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -130,7 +135,7 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
           icon={<ImageUp size={20} />}
           onClick={() => fileInputRef.current?.click()}
         >
-          Foto auswählen
+          Aus Fotos wählen
         </Button>
         <Button
           variant="primary"

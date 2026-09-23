@@ -12,7 +12,7 @@ import type {
   Supplier,
   Tray,
 } from '@/types/database';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CameraCapture } from './CameraCapture';
 import { StepProgress } from './components/StepProgress';
@@ -36,9 +36,19 @@ const MODE_SUBTITLE: Record<ScannerMode['kind'], string> = {
 
 interface ScannerFlowProps {
   mode?: ScannerMode;
+  /**
+   * Skips the capture step and feeds this photo straight into recognition -
+   * used by SetScannerFlow, which already collected 2-10 photos upfront (one
+   * per Sieb in a delivered set) and runs this component once per photo.
+   */
+  initialImageDataUrl?: string;
+  /** Set by SetScannerFlow so the "done" screen shows "Sieb 2/5" progress instead of the normal single-scan message. */
+  setProgress?: { index: number; total: number };
+  /** Called instead of resetting when the SET's current item is confirmed - SetScannerFlow advances to the next photo (or its own summary) by remounting this component with a new key. */
+  onSetItemDone?: () => void;
 }
 
-export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps) {
+export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl, setProgress, onSetItemDone }: ScannerFlowProps) {
   const navigate = useNavigate();
   const { performedBy } = useAuth();
   const [state, setState] = useState(createInitialScannerState);
@@ -50,6 +60,12 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
   const [operationNote, setOperationNote] = useState('');
   const [operationDate, setOperationDate] = useState('');
   const [openedCaseId, setOpenedCaseId] = useState<string | null>(null);
+  // Suppresses the capture-step UI only for the one auto-fed photo from
+  // SetScannerFlow's initialImageDataUrl. If the user then retakes (via
+  // IdentifyStep/UnmatchedStep "onRetake" -> resetFlow), this flips to
+  // false so the live camera actually shows instead of a blank screen -
+  // there's no second pre-supplied photo to fall back to.
+  const [skipCaptureUi, setSkipCaptureUi] = useState(Boolean(initialImageDataUrl));
 
   const patch = useCallback((p: Partial<typeof state>) => setState((prev) => ({ ...prev, ...p })), []);
 
@@ -57,6 +73,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
     setState(createInitialScannerState());
     setRecognitionStage('barcode');
     setMismatchWarning(null);
+    setSkipCaptureUi(false);
   }, []);
 
   const handleCapture = useCallback(
@@ -86,6 +103,17 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
     },
     [patch],
   );
+
+  // SetScannerFlow already has the photo (from its own capture/gallery
+  // step) and remounts this component fresh per photo, so it's safe to
+  // fire this exactly once on mount rather than re-running on every
+  // handleCapture identity change.
+  useEffect(() => {
+    if (initialImageDataUrl) {
+      handleCapture(initialImageDataUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadTrayIntoState = useCallback(
     async (tray: Tray) => {
@@ -372,8 +400,10 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
         subtitle={MODE_SUBTITLE[mode.kind]}
         showBack={state.step !== 'capture' && state.step !== 'done'}
         onBack={() => {
-          if (state.step === 'identify') patch({ step: 'capture' });
-          else if (state.step === 'unmatched') patch({ step: 'identify' });
+          if (state.step === 'identify') {
+            setSkipCaptureUi(false);
+            patch({ step: 'capture' });
+          } else if (state.step === 'unmatched') patch({ step: 'identify' });
           else if (state.step === 'matched') patch({ step: 'identify' });
           else if (state.step === 'instruments') patch({ step: 'matched' });
           else if (state.step === 'summary') patch({ step: 'instruments' });
@@ -382,7 +412,11 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
       />
       <StepProgress step={state.step} />
 
-      {state.step === 'capture' && <div className="px-4 py-4"><CameraCapture onCapture={handleCapture} /></div>}
+      {state.step === 'capture' && !skipCaptureUi && (
+        <div className="px-4 py-4">
+          <CameraCapture onCapture={handleCapture} />
+        </div>
+      )}
 
       {state.step === 'recognizing' && (
         <RecognizingStep imageDataUrl={state.imageDataUrl} stage={recognitionStage} />
@@ -476,7 +510,20 @@ export function ScannerFlow({ mode = { kind: 'standalone' } }: ScannerFlowProps)
         />
       )}
 
-      {state.step === 'done' && mode.kind === 'standalone' && (
+      {state.step === 'done' && mode.kind === 'standalone' && setProgress && onSetItemDone && (
+        <DoneStep
+          detailPath={`/historie/${state.scanId}`}
+          message={`Sieb ${setProgress.index}/${setProgress.total} erfasst${state.tray ? `: ${state.tray.code}` : ''}.`}
+          onStartNew={onSetItemDone}
+          startNewLabel={
+            setProgress.index < setProgress.total
+              ? `Nächstes Sieb (${setProgress.index + 1}/${setProgress.total})`
+              : 'SET abschliessen'
+          }
+        />
+      )}
+
+      {state.step === 'done' && mode.kind === 'standalone' && !setProgress && (
         <DoneStep detailPath={`/historie/${state.scanId}`} onStartNew={resetFlow} />
       )}
 
