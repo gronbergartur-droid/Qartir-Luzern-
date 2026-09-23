@@ -1,9 +1,9 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import type { ExtraInstrumentEntry, InstrumentCheckEntry, Supplier, Tray } from '@/types/database';
+import type { ExtraInstrumentEntry, InstrumentCheckEntry, Physician, Supplier, Tray } from '@/types/database';
 import { CheckCircle2, CircleAlert, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface CaseIntakeSummaryStepProps {
   tray: Tray;
@@ -14,6 +14,9 @@ interface CaseIntakeSummaryStepProps {
   onOperationNoteChange: (value: string) => void;
   operationDate: string;
   onOperationDateChange: (value: string) => void;
+  physicians: Physician[];
+  operateurId: string | null;
+  onOperateurIdChange: (value: string | null) => void;
   onConfirmAndOpenCase: () => void;
   saving: boolean;
 }
@@ -27,10 +30,23 @@ export function CaseIntakeSummaryStep({
   onOperationNoteChange,
   operationDate,
   onOperationDateChange,
+  physicians,
+  operateurId,
+  onOperateurIdChange,
   onConfirmAndOpenCase,
   saving,
 }: CaseIntakeSummaryStepProps) {
   const [acknowledged, setAcknowledged] = useState(false);
+
+  const physiciansByDepartment = useMemo(() => {
+    const groups = new Map<string, Physician[]>();
+    for (const p of physicians) {
+      const list = groups.get(p.department) ?? [];
+      list.push(p);
+      groups.set(p.department, list);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [physicians]);
 
   const missing = checks.filter((c) => c.quantityConfirmed < c.quantityExpected);
   const detectedCount =
@@ -121,6 +137,26 @@ export function CaseIntakeSummaryStep({
           />
         </label>
       </div>
+
+      <label className="mt-3 block">
+        <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-500">Operateur</span>
+        <select
+          value={operateurId ?? ''}
+          onChange={(e) => onOperateurIdChange(e.target.value || null)}
+          className="w-full rounded-xl border border-ink-200 px-3.5 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+        >
+          <option value="">– Nicht ausgewählt –</option>
+          {physiciansByDepartment.map(([department, list]) => (
+            <optgroup key={department} label={department}>
+              {list.map((physician) => (
+                <option key={physician.id} value={physician.id}>
+                  {physician.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
 
       <button
         type="button"

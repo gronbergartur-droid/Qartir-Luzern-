@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { dataProvider } from '@/services';
-import type { LoanCase, Supplier, Tray } from '@/types/database';
+import type { LoanCase, Physician, Supplier, Tray } from '@/types/database';
 import { ClipboardList, PackageOpen, ScanLine } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,15 +12,20 @@ export function CasesPage() {
   const [cases, setCases] = useState<LoanCase[] | null>(null);
   const [trays, setTrays] = useState<Tray[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [physicians, setPhysicians] = useState<Physician[]>([]);
 
   useEffect(() => {
-    Promise.all([dataProvider.getCases(), dataProvider.getTrays(), dataProvider.getSuppliers()]).then(
-      ([caseList, trayList, supplierList]) => {
-        setCases(caseList);
-        setTrays(trayList);
-        setSuppliers(supplierList);
-      },
-    );
+    Promise.all([
+      dataProvider.getCases(),
+      dataProvider.getTrays(),
+      dataProvider.getSuppliers(),
+      dataProvider.getPhysicians(),
+    ]).then(([caseList, trayList, supplierList, physicianList]) => {
+      setCases(caseList);
+      setTrays(trayList);
+      setSuppliers(supplierList);
+      setPhysicians(physicianList);
+    });
   }, []);
 
   const openCases = cases?.filter((c) => c.status === 'outtake_pending') ?? [];
@@ -61,7 +66,13 @@ export function CasesPage() {
             </p>
             <div className="space-y-2">
               {openCases.map((c) => (
-                <CaseCard key={c.id} loanCase={c} tray={trays.find((t) => t.id === c.trayId)} supplier={suppliers.find((s) => s.id === c.supplierId)} />
+                <CaseCard
+                  key={c.id}
+                  loanCase={c}
+                  tray={trays.find((t) => t.id === c.trayId)}
+                  supplier={suppliers.find((s) => s.id === c.supplierId)}
+                  operateur={physicians.find((p) => p.id === c.operateurId)}
+                />
               ))}
             </div>
           </>
@@ -74,7 +85,13 @@ export function CasesPage() {
             </p>
             <div className="space-y-2">
               {comparedCases.map((c) => (
-                <CaseCard key={c.id} loanCase={c} tray={trays.find((t) => t.id === c.trayId)} supplier={suppliers.find((s) => s.id === c.supplierId)} />
+                <CaseCard
+                  key={c.id}
+                  loanCase={c}
+                  tray={trays.find((t) => t.id === c.trayId)}
+                  supplier={suppliers.find((s) => s.id === c.supplierId)}
+                  operateur={physicians.find((p) => p.id === c.operateurId)}
+                />
               ))}
             </div>
           </>
@@ -84,7 +101,17 @@ export function CasesPage() {
   );
 }
 
-function CaseCard({ loanCase, tray, supplier }: { loanCase: LoanCase; tray?: Tray; supplier?: Supplier }) {
+function CaseCard({
+  loanCase,
+  tray,
+  supplier,
+  operateur,
+}: {
+  loanCase: LoanCase;
+  tray?: Tray;
+  supplier?: Supplier;
+  operateur?: Physician;
+}) {
   const statusBadge =
     loanCase.status === 'outtake_pending' ? (
       <Badge tone="neutral">Offen</Badge>
@@ -108,6 +135,7 @@ function CaseCard({ loanCase, tray, supplier }: { loanCase: LoanCase; tray?: Tra
           {statusBadge}
         </div>
         {loanCase.operationNote && <p className="mt-2 text-xs text-ink-500">Operation: {loanCase.operationNote}</p>}
+        {operateur && <p className="mt-0.5 text-xs text-ink-500">Operateur: {operateur.name}</p>}
       </Link>
 
       {loanCase.status === 'outtake_pending' && (

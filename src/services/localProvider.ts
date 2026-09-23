@@ -1,9 +1,11 @@
-import { suppliers, trayInstruments, trays } from '@/data/referenceData';
+import { physicians, suppliers, trayInstruments, trays } from '@/data/referenceData';
 import { getCurrentUser, setCurrentUser } from '@/lib/currentUser';
 import type {
   AuditLogEntry,
   CaseComparison,
   LoanCase,
+  Physician,
+  PhysicianInput,
   ScanRecord,
   Supplier,
   SupplierInput,
@@ -20,6 +22,7 @@ const LOCAL_USER_ID = 'local-device-user';
 const SCAN_HISTORY_KEY = 'idm-mobile.scan-history.v1';
 const AUDIT_LOG_KEY = 'idm-mobile.audit-log.v1';
 const SUPPLIERS_KEY = 'idm-mobile.suppliers.v1';
+const PHYSICIANS_KEY = 'idm-mobile.physicians.v1';
 const TRAYS_KEY = 'idm-mobile.trays.v1';
 const TRAY_INSTRUMENTS_KEY = 'idm-mobile.tray-instruments.v1';
 const CASES_KEY = 'idm-mobile.cases.v1';
@@ -59,6 +62,7 @@ export class LocalDataProvider implements DataProvider {
   private scanHistory: ScanRecord[] = readFromStorage<ScanRecord>(SCAN_HISTORY_KEY, []);
   private auditLog: AuditLogEntry[] = readFromStorage<AuditLogEntry>(AUDIT_LOG_KEY, []);
   private suppliers: Supplier[] = readFromStorage<Supplier>(SUPPLIERS_KEY, suppliers);
+  private physicians: Physician[] = readFromStorage<Physician>(PHYSICIANS_KEY, physicians);
   private trays: Tray[] = readFromStorage<Tray>(TRAYS_KEY, trays);
   private trayInstruments: TrayInstrument[] = readFromStorage<TrayInstrument>(
     TRAY_INSTRUMENTS_KEY,
@@ -126,6 +130,25 @@ export class LocalDataProvider implements DataProvider {
     }
     this.suppliers = this.suppliers.filter((s) => s.id !== id);
     writeToStorage(SUPPLIERS_KEY, this.suppliers);
+  }
+
+  // ---------------------------------------------------------------------
+  // Physicians (Belegärzte/Operateure)
+  // ---------------------------------------------------------------------
+
+  async getPhysicians(): Promise<Physician[]> {
+    return [...this.physicians].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createPhysician(input: PhysicianInput): Promise<Physician> {
+    const physician: Physician = {
+      id: crypto.randomUUID(),
+      ...input,
+      createdAt: new Date().toISOString(),
+    };
+    this.physicians = [...this.physicians, physician];
+    writeToStorage(PHYSICIANS_KEY, this.physicians);
+    return physician;
   }
 
   // ---------------------------------------------------------------------
@@ -258,6 +281,7 @@ export class LocalDataProvider implements DataProvider {
     intakeScanId: string;
     operationNote: string | null;
     operationDate: string | null;
+    operateurId: string | null;
     performedBy: string;
   }): Promise<LoanCase> {
     const now = new Date().toISOString();
@@ -268,6 +292,7 @@ export class LocalDataProvider implements DataProvider {
       status: 'outtake_pending',
       operationNote: input.operationNote,
       operationDate: input.operationDate,
+      operateurId: input.operateurId,
       intakeScanId: input.intakeScanId,
       outtakeScanId: null,
       comparison: null,

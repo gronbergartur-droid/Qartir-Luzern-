@@ -44,6 +44,18 @@ export interface TrayInstrument {
   referenceImageUrl: string | null;
 }
 
+/** A Belegarzt/Operateur who can be assigned to a Sieb-Fall as the operating surgeon. */
+export interface Physician {
+  id: UUID;
+  name: string;
+  /** Fachbereich, e.g. "Orthopädie", "Gynäkologie" - free text so new departments don't need a schema change. */
+  department: string;
+  mobilePhone: string | null;
+  practicePhone: string | null;
+  email: string | null;
+  createdAt: ISODateString;
+}
+
 /** A reference (master) tray definition against which scans are matched. */
 export interface Tray {
   id: UUID;
@@ -156,11 +168,12 @@ export type AuditAction =
   | 'case_outtake'
   | 'case_compared'
   | 'case_readiness_notified'
-  | 'archive_downloaded';
+  | 'archive_downloaded'
+  | 'physician_created';
 
 export interface AuditLogEntry {
   id: UUID;
-  entityType: 'scan' | 'tray' | 'supplier' | 'case' | 'archive';
+  entityType: 'scan' | 'tray' | 'supplier' | 'case' | 'archive' | 'physician';
   entityId: UUID;
   action: AuditAction;
   performedBy: string;
@@ -236,6 +249,8 @@ export interface LoanCase {
   /** Free-text reference to the operation this loaner tray was used for. */
   operationNote: string | null;
   operationDate: ISODateString | null;
+  /** The operating surgeon/Belegarzt for this case, if known at intake. */
+  operateurId: UUID | null;
   intakeScanId: UUID;
   outtakeScanId: UUID | null;
   comparison: CaseComparison | null;
@@ -265,6 +280,14 @@ export interface SupplierInput {
   contactNote: string | null;
   source: string | null;
   logoUrl: string | null;
+}
+
+export interface PhysicianInput {
+  name: string;
+  department: string;
+  mobilePhone: string | null;
+  practicePhone: string | null;
+  email: string | null;
 }
 
 export interface TrayInstrumentInput {

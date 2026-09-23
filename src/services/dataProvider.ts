@@ -2,6 +2,8 @@ import type {
   AuditLogEntry,
   CaseComparison,
   LoanCase,
+  Physician,
+  PhysicianInput,
   ScanRecord,
   Supplier,
   SupplierInput,
@@ -30,6 +32,9 @@ export interface DataProvider {
   /** Rejects if the supplier is still referenced by any tray - deactivate instead. */
   deleteSupplier(id: string): Promise<void>;
 
+  getPhysicians(): Promise<Physician[]>;
+  createPhysician(input: PhysicianInput): Promise<Physician>;
+
   getTrays(): Promise<Tray[]>;
   /** Resolve a tray by its primary code or any of its known aliases (case-insensitive). */
   findTrayByIdentifier(identifier: string): Promise<Tray | null>;
@@ -51,6 +56,7 @@ export interface DataProvider {
     intakeScanId: string;
     operationNote: string | null;
     operationDate: string | null;
+    operateurId: string | null;
     performedBy: string;
   }): Promise<LoanCase>;
   getCases(): Promise<LoanCase[]>;

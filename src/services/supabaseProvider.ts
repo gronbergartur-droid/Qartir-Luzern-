@@ -3,6 +3,8 @@ import type {
   AuditLogEntry,
   CaseComparison,
   LoanCase,
+  Physician,
+  PhysicianInput,
   ScanRecord,
   Supplier,
   SupplierInput,
@@ -95,6 +97,26 @@ export class SupabaseDataProvider implements DataProvider {
     }
     const { error } = await this.client.from('suppliers').delete().eq('id', id);
     if (error) throw error;
+  }
+
+  // ---------------------------------------------------------------------
+  // Physicians (Belegärzte/Operateure)
+  // ---------------------------------------------------------------------
+
+  async getPhysicians(): Promise<Physician[]> {
+    const { data, error } = await this.client.from('physicians').select('*').order('name');
+    if (error) throw error;
+    return (data ?? []).map(mapPhysicianRow);
+  }
+
+  async createPhysician(input: PhysicianInput): Promise<Physician> {
+    const { data, error } = await this.client
+      .from('physicians')
+      .insert(mapPhysicianInputToRow(input))
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapPhysicianRow(data);
   }
 
   // ---------------------------------------------------------------------
@@ -242,6 +264,7 @@ export class SupabaseDataProvider implements DataProvider {
     intakeScanId: string;
     operationNote: string | null;
     operationDate: string | null;
+    operateurId: string | null;
     performedBy: string;
   }): Promise<LoanCase> {
     const { data, error } = await this.client
@@ -252,6 +275,7 @@ export class SupabaseDataProvider implements DataProvider {
         status: 'outtake_pending',
         operation_note: input.operationNote,
         operation_date: input.operationDate,
+        operateur_id: input.operateurId,
         intake_scan_id: input.intakeScanId,
         performed_by_intake: input.performedBy,
       })
@@ -382,6 +406,28 @@ function mapSupplierInputToRow(input: SupplierInput) {
     contact_note: input.contactNote,
     source: input.source,
     logo_url: input.logoUrl,
+  };
+}
+
+function mapPhysicianRow(row: any): Physician {
+  return {
+    id: row.id,
+    name: row.name,
+    department: row.department,
+    mobilePhone: row.mobile_phone,
+    practicePhone: row.practice_phone,
+    email: row.email,
+    createdAt: row.created_at,
+  };
+}
+
+function mapPhysicianInputToRow(input: PhysicianInput) {
+  return {
+    name: input.name,
+    department: input.department,
+    mobile_phone: input.mobilePhone,
+    practice_phone: input.practicePhone,
+    email: input.email,
   };
 }
 
@@ -525,6 +571,7 @@ function mapCaseRow(row: any): LoanCase {
     status: row.status,
     operationNote: row.operation_note,
     operationDate: row.operation_date,
+    operateurId: row.operateur_id,
     intakeScanId: row.intake_scan_id,
     outtakeScanId: row.outtake_scan_id,
     comparison: row.comparison,

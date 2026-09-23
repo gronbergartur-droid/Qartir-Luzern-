@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { dataProvider } from '@/services';
 import { buildMonthlyArchive, formatMonthLabel, listAvailableMonths, statsForMonth } from './generateMonthlyArchive';
-import type { AuditLogEntry, LoanCase, ScanRecord, Supplier, Tray } from '@/types/database';
+import type { AuditLogEntry, LoanCase, Physician, ScanRecord, Supplier, Tray } from '@/types/database';
 import { Archive, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -24,6 +24,7 @@ export function ArchivPage() {
     cases: LoanCase[];
     scans: ScanRecord[];
     auditLog: AuditLogEntry[];
+    physicians: Physician[];
   } | null>(null);
   const [downloadingMonth, setDownloadingMonth] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,10 @@ export function ArchivPage() {
       dataProvider.getCases(),
       dataProvider.getScanHistory(),
       dataProvider.getAuditLog(),
-    ]).then(([suppliers, trays, cases, scans, auditLog]) => setData({ suppliers, trays, cases, scans, auditLog }));
+      dataProvider.getPhysicians(),
+    ]).then(([suppliers, trays, cases, scans, auditLog, physicians]) =>
+      setData({ suppliers, trays, cases, scans, auditLog, physicians }),
+    );
   }, []);
 
   const allowed = !me || me.role === 'admin' || me.role === 'op_leitung';

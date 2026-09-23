@@ -1,4 +1,4 @@
-import type { AuditLogEntry, LoanCase, ScanRecord, Supplier, Tray } from '@/types/database';
+import type { AuditLogEntry, LoanCase, Physician, ScanRecord, Supplier, Tray } from '@/types/database';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 
@@ -34,6 +34,7 @@ export interface MonthlyArchiveSource {
   cases: LoanCase[];
   scans: ScanRecord[];
   auditLog: AuditLogEntry[];
+  physicians: Physician[];
 }
 
 export interface MonthlyArchiveStats {
@@ -77,6 +78,7 @@ export async function buildMonthlyArchive(
   const caseById = new Map(source.cases.map((c) => [c.id, c]));
   const trayById = new Map(source.trays.map((t) => [t.id, t]));
   const supplierById = new Map(source.suppliers.map((s) => [s.id, s]));
+  const physicianById = new Map(source.physicians.map((p) => [p.id, p]));
 
   const involvedSupplierIds = new Set<string>();
   const involvedTrayIds = new Set<string>();
@@ -109,7 +111,7 @@ export async function buildMonthlyArchive(
 
   zip.file('01_Lieferanten/Lieferanten.xlsx', await buildSupplierSheet(involvedSuppliers));
   zip.file('02_Siebe/Siebe.xlsx', await buildTraySheet(involvedTrays, supplierById));
-  zip.file('03_Sieb_Faelle/Sieb_Faelle.xlsx', await buildCaseSheet(cases, trayById, supplierById));
+  zip.file('03_Sieb_Faelle/Sieb_Faelle.xlsx', await buildCaseSheet(cases, trayById, supplierById, physicianById));
 
   zip.file('04_Scans/Eingang/Eingang_Scans.xlsx', await buildScanSheet(scanBuckets.eingang, trayById, 'Eingang'));
   zip.file('04_Scans/Ausgang/Ausgang_Scans.xlsx', await buildScanSheet(scanBuckets.ausgang, trayById, 'Ausgang'));
@@ -218,6 +220,7 @@ async function buildCaseSheet(
   cases: LoanCase[],
   trayById: Map<string, Tray>,
   supplierById: Map<string, Supplier>,
+  physicianById: Map<string, Physician>,
 ): Promise<ExcelJS.Buffer> {
   const wb = new ExcelJS.Workbook();
   const sheet = wb.addWorksheet('Sieb-Fälle');
@@ -227,6 +230,7 @@ async function buildCaseSheet(
     { header: 'Status', key: 'status', width: 16 },
     { header: 'Operation', key: 'operationNote', width: 26 },
     { header: 'OP-Datum', key: 'operationDate', width: 14 },
+    { header: 'Operateur', key: 'operateur', width: 24 },
     { header: 'Eingang durch', key: 'performedByIntake', width: 20 },
     { header: 'Ausgang durch', key: 'performedByOuttake', width: 20 },
     { header: 'Abweichungen', key: 'hasDeviations', width: 14 },
@@ -240,6 +244,7 @@ async function buildCaseSheet(
       status: c.status === 'compared' ? 'Abgeschlossen' : 'Offen',
       operationNote: c.operationNote ?? '',
       operationDate: c.operationDate ?? '',
+      operateur: c.operateurId ? (physicianById.get(c.operateurId)?.name ?? '') : '',
       performedByIntake: c.performedByIntake,
       performedByOuttake: c.performedByOuttake ?? '',
       hasDeviations: c.comparison ? (c.comparison.hasDeviations ? 'Ja' : 'Nein') : '',
