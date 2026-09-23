@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 interface IdentifyStepProps {
   imageDataUrl: string | null;
+  additionalImageDataUrls?: string[];
   recognition: RecognitionResult;
   onConfirm: (identifier: string) => void;
   onRetake: () => void;
@@ -18,7 +19,13 @@ const sourceMeta: Record<RecognitionCandidate['source'], { label: string; icon: 
   ocr: { label: 'Texterkennung', icon: ScanText },
 };
 
-export function IdentifyStep({ imageDataUrl, recognition, onConfirm, onRetake }: IdentifyStepProps) {
+export function IdentifyStep({
+  imageDataUrl,
+  additionalImageDataUrls,
+  recognition,
+  onConfirm,
+  onRetake,
+}: IdentifyStepProps) {
   const { candidateIdentifiers } = recognition;
   const [selected, setSelected] = useState<string | null>(candidateIdentifiers[0]?.value ?? null);
   const [manualValue, setManualValue] = useState('');
@@ -39,6 +46,19 @@ export function IdentifyStep({ imageDataUrl, recognition, onConfirm, onRetake }:
           alt="Aufgenommenes Leihsieb"
           className="mb-4 h-40 w-full rounded-xl object-cover"
         />
+      )}
+
+      {additionalImageDataUrls && additionalImageDataUrls.length > 0 && (
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          {additionalImageDataUrls.map((url, index) => (
+            <img
+              key={index}
+              src={url}
+              alt={`Weiteres Foto ${index + 1}`}
+              className="h-20 w-full rounded-lg object-cover"
+            />
+          ))}
+        </div>
       )}
 
       {candidateIdentifiers.length > 0 && (

@@ -96,7 +96,7 @@ export function DashboardPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink-900">Sieb-SET erfassen</p>
-            <p className="text-xs text-ink-500">Lieferung mit mehreren Leihsieben - 2 bis 10 Fotos nacheinander</p>
+            <p className="text-xs text-ink-500">Lieferung mit mehreren Leihsieben - 2 bis 10 Siebe, je 1-3 Fotos</p>
           </div>
         </Card>
       </Link>

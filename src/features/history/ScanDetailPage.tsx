@@ -58,6 +58,19 @@ export function ScanDetailPage() {
           />
         )}
 
+        {scan.additionalImageDataUrls.length > 0 && (
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            {scan.additionalImageDataUrls.map((url, index) => (
+              <img
+                key={index}
+                src={url}
+                alt={`Weiteres Foto ${index + 1}`}
+                className="h-20 w-full rounded-lg object-cover"
+              />
+            ))}
+          </div>
+        )}
+
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>

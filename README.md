@@ -127,10 +127,11 @@ ein echtes Supabase-Projekt angepasst werden muss.
   kann statt der Live-Kamera auch ein Foto aus der Fotobibliothek des
   Telefons gewählt werden.
 - **Sieb-SET erfassen** (`/scanner/set`) – für eine Lieferung mit mehreren
-  Leihsieben: 2 bis 10 Fotos (Kamera oder Fotobibliothek) nacheinander
-  sammeln, danach wird jedes Foto einzeln erkannt, zugeordnet und
-  kontrolliert – jedes Foto ergibt einen eigenen, unabhängigen Scan-Eintrag
-  (kein Sammel-Scan mehrerer Fotos eines einzigen Siebs).
+  Leihsieben: 2 bis 10 Siebe erfassen, pro Sieb 1 bis 3 Fotos (Kamera oder
+  Fotobibliothek – Übersicht Pflicht, Detail-/Barcode-Nahaufnahmen optional).
+  Anschliessend wird jedes Sieb einzeln anhand all seiner Fotos erkannt,
+  zugeordnet und kontrolliert – jedes Sieb ergibt einen eigenen, unabhängigen
+  Scan-Eintrag (kein Sammel-Scan mehrerer Siebe in einem Eintrag).
 - **Lieferantenverwaltung** (`/lieferanten`) – vollständiges CRUD: anlegen,
   bearbeiten, aktivieren/deaktivieren, löschen (blockiert, solange noch
   Siebe zugeordnet sind – stattdessen deaktivieren). Detailseite zeigt alle

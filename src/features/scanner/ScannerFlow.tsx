@@ -37,18 +37,20 @@ const MODE_SUBTITLE: Record<ScannerMode['kind'], string> = {
 interface ScannerFlowProps {
   mode?: ScannerMode;
   /**
-   * Skips the capture step and feeds this photo straight into recognition -
-   * used by SetScannerFlow, which already collected 2-10 photos upfront (one
-   * per Sieb in a delivered set) and runs this component once per photo.
+   * Skips the capture step and feeds these photos (1-3 of the same Sieb:
+   * overview plus optional detail/barcode close-ups) straight into
+   * recognition - used by SetScannerFlow, which already collected 2-10
+   * Siebe upfront (each with its own 1-3 photos) and runs this component
+   * once per Sieb.
    */
-  initialImageDataUrl?: string;
+  initialImageDataUrls?: string[];
   /** Set by SetScannerFlow so the "done" screen shows "Sieb 2/5" progress instead of the normal single-scan message. */
   setProgress?: { index: number; total: number };
-  /** Called instead of resetting when the SET's current item is confirmed - SetScannerFlow advances to the next photo (or its own summary) by remounting this component with a new key. */
+  /** Called instead of resetting when the SET's current item is confirmed - SetScannerFlow advances to the next Sieb (or its own summary) by remounting this component with a new key. */
   onSetItemDone?: () => void;
 }
 
-export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl, setProgress, onSetItemDone }: ScannerFlowProps) {
+export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrls, setProgress, onSetItemDone }: ScannerFlowProps) {
   const navigate = useNavigate();
   const { performedBy } = useAuth();
   const [state, setState] = useState(createInitialScannerState);
@@ -60,12 +62,12 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
   const [operationNote, setOperationNote] = useState('');
   const [operationDate, setOperationDate] = useState('');
   const [openedCaseId, setOpenedCaseId] = useState<string | null>(null);
-  // Suppresses the capture-step UI only for the one auto-fed photo from
-  // SetScannerFlow's initialImageDataUrl. If the user then retakes (via
+  // Suppresses the capture-step UI only for the auto-fed photo(s) from
+  // SetScannerFlow's initialImageDataUrls. If the user then retakes (via
   // IdentifyStep/UnmatchedStep "onRetake" -> resetFlow), this flips to
   // false so the live camera actually shows instead of a blank screen -
-  // there's no second pre-supplied photo to fall back to.
-  const [skipCaptureUi, setSkipCaptureUi] = useState(Boolean(initialImageDataUrl));
+  // there's no pre-supplied photo to fall back to.
+  const [skipCaptureUi, setSkipCaptureUi] = useState(Boolean(initialImageDataUrls?.length));
 
   const patch = useCallback((p: Partial<typeof state>) => setState((prev) => ({ ...prev, ...p })), []);
 
@@ -76,11 +78,15 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
     setSkipCaptureUi(false);
   }, []);
 
-  const handleCapture = useCallback(
-    async (imageDataUrl: string) => {
-      patch({ imageDataUrl, step: 'recognizing' });
+  const runIdentification = useCallback(
+    async (imageDataUrls: string[]) => {
+      patch({
+        imageDataUrl: imageDataUrls[0] ?? null,
+        additionalImageDataUrls: imageDataUrls.slice(1),
+        step: 'recognizing',
+      });
       try {
-        const recognition = await runRecognition(imageDataUrl, setRecognitionStage);
+        const recognition = await runRecognition(imageDataUrls, setRecognitionStage);
         patch({
           recognition,
           selectedIdentifier: recognition.candidateIdentifiers[0]?.value ?? null,
@@ -104,13 +110,15 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
     [patch],
   );
 
-  // SetScannerFlow already has the photo (from its own capture/gallery
-  // step) and remounts this component fresh per photo, so it's safe to
-  // fire this exactly once on mount rather than re-running on every
-  // handleCapture identity change.
+  const handleCapture = useCallback((imageDataUrl: string) => runIdentification([imageDataUrl]), [runIdentification]);
+
+  // SetScannerFlow already has the photo(s) (from its own capture/gallery
+  // step) and remounts this component fresh per Sieb, so it's safe to fire
+  // this exactly once on mount rather than re-running on every
+  // runIdentification identity change.
   useEffect(() => {
-    if (initialImageDataUrl) {
-      handleCapture(initialImageDataUrl);
+    if (initialImageDataUrls?.length) {
+      runIdentification(initialImageDataUrls);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -218,6 +226,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
         supplierId: state.supplier?.id ?? null,
         caseId: null,
         capturedImageDataUrl: state.imageDataUrl,
+        additionalImageDataUrls: state.additionalImageDataUrls,
         recognition: state.recognition,
         matchedIdentifier: state.selectedIdentifier,
         status: 'confirmed',
@@ -264,6 +273,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
         supplierId: state.supplier?.id ?? null,
         caseId: null,
         capturedImageDataUrl: state.imageDataUrl,
+        additionalImageDataUrls: state.additionalImageDataUrls,
         recognition: state.recognition,
         matchedIdentifier: state.selectedIdentifier,
         status: 'confirmed',
@@ -344,6 +354,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
         supplierId: state.supplier?.id ?? null,
         caseId: mode.caseId,
         capturedImageDataUrl: state.imageDataUrl,
+        additionalImageDataUrls: state.additionalImageDataUrls,
         recognition: state.recognition,
         matchedIdentifier: state.selectedIdentifier,
         status: 'confirmed',
@@ -425,6 +436,7 @@ export function ScannerFlow({ mode = { kind: 'standalone' }, initialImageDataUrl
       {state.step === 'identify' && state.recognition && (
         <IdentifyStep
           imageDataUrl={state.imageDataUrl}
+          additionalImageDataUrls={state.additionalImageDataUrls}
           recognition={state.recognition}
           onConfirm={handleConfirmIdentifier}
           onRetake={resetFlow}
